@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rl-mjlab-env"
+version = "0.1.0"
+description = "MJLab reinforcement-learning environments."
+requires-python = ">=3.10"
+dependencies = [
+  "mjlab",
+]
+
+[project.entry-points."mjlab.tasks"]
+rl_mjlab_env = "rl_mjlab_env.tasks"
+
+[project.scripts]
+train = "rl_mjlab_env.scripts.train:main"
+play = "rl_mjlab_env.scripts.play:main"
+
+[tool.setuptools.packages.find]
+where = ["src", "."]
+include = ["rl_mjlab_env*", "rsl_rl*"]
+
+[tool.ruff]
+src = ["src", "rsl_rl"]
+indent-width = 4
