@@ -11,8 +11,8 @@ import time
 from collections import deque
 
 import torch
-from rl_mjlab_env.rl.amp_utils.motion_loader import AMPLoader
-from rl_mjlab_env.rl.amp_utils.normalizer import Normalizer
+from rl_mjlab_env.utils.amp_utils.motion_loader import AMPLoader
+from rl_mjlab_env.utils.amp_utils.normalizer import Normalizer
 from rsl_rl.algorithms import AMPVAEPPO
 from rsl_rl.env import VecEnv
 from rsl_rl.modules import VAE, ActorCritic, AMPDiscriminator

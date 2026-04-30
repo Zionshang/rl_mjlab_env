@@ -10,7 +10,7 @@ from math import exp
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from rl_mjlab_env.rl.amp_utils.normalizer import Normalizer
+from rl_mjlab_env.utils.amp_utils.normalizer import Normalizer
 from rsl_rl.modules import VAE, ActorCritic, AMPDiscriminator
 from rsl_rl.storage import ReplayBuffer, RolloutStorageAMPVAE
 
