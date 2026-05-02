@@ -28,7 +28,7 @@ train_amp Mjlab-AMP-Flat-Unitree-Go2 \
 ## Play
 
 ```bash
-train_amp Mjlab-AMP-Flat-Unitree-Go2 \
+play_amp Mjlab-AMP-Flat-Unitree-Go2 \
   --checkpoint-file path/to/checkpoint.pt \
   --num-envs 4 \
   --viewer viser
