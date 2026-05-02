@@ -183,15 +183,7 @@ class AMPVAEOnPolicyRunner:
                     )
                     amp_obs = torch.clone(next_amp_obs)
                     # Step the environment
-                    (
-                        obs_buf,
-                        rewards,
-                        dones,
-                        infos,
-                        reset_env_ids,
-                        terminal_amp_states,
-                        episode_reward,
-                    ) = self.env.step(actions.to(self.device), amp_out.to(self.device))
+                    obs_buf, rewards, dones, infos = self.env.step(actions.to(self.device), amp_out.to(self.device))
                     actor_obs = obs_buf["actor_obs"]
                     critic_obs = obs_buf["critic_obs"]
                     next_amp_obs = obs_buf["amp_obs"]
@@ -214,7 +206,11 @@ class AMPVAEOnPolicyRunner:
                     critic_obs = self.privileged_obs_normalizer(critic_obs)
 
                     next_amp_obs_with_term = torch.clone(next_amp_obs)
-                    next_amp_obs_with_term[reset_env_ids] = terminal_amp_states
+                    reset_env_ids = infos.get("reset_env_ids")
+                    terminal_amp_states = infos.get("terminal_amp_states")
+                    episode_reward = infos.get("episode_reward")
+                    if terminal_amp_states is not None:
+                        next_amp_obs_with_term[reset_env_ids] = terminal_amp_states
 
                     next_actor_obs = torch.clone(critic_obs.detach()[:, 3:48])
 

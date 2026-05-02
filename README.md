@@ -18,8 +18,8 @@ ln -s /path/to/unitree_go2/trot/npz dataset/unitree_go2/trot/npz
 ## Train
 
 ```bash
-train Mjlab-AMP-Flat-Unitree-Go2 \
-  --gpu-ids 0 \
+train_amp Mjlab-AMP-Flat-Unitree-Go2 \
+  --gpu-ids [0] \
   --env.scene.num-envs 4096 \
   --video True \
   --agent.max-iterations 10000
@@ -28,7 +28,7 @@ train Mjlab-AMP-Flat-Unitree-Go2 \
 ## Play
 
 ```bash
-play Mjlab-AMP-Flat-Unitree-Go2 \
+train_amp Mjlab-AMP-Flat-Unitree-Go2 \
   --checkpoint-file path/to/checkpoint.pt \
   --num-envs 4 \
   --viewer viser

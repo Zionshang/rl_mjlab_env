@@ -13,7 +13,7 @@ class AMPLoader:
     def __init__(
         self,
         device,
-        amp_loader_cfg,
+        observation_schema,
         time_between_frames,
         num_preload_transitions=1000000,
         motion_files=glob.glob("datasets/motion_files2/*"),
@@ -22,8 +22,8 @@ class AMPLoader:
         time_between_frames: Amount of time in seconds between transition.
         """
         self.device = device
-        self.amp_loader_cfg = amp_loader_cfg
-        self.combined_indices = amp_loader_cfg['combined_indices']
+        self.observation_schema = observation_schema
+        self.combined_indices = observation_schema['combined_indices']
         self.time_between_frames = time_between_frames
 
         # Values to store for each trajectory.
@@ -40,6 +40,14 @@ class AMPLoader:
         print_placeholder_end()
         self.traj_length = len(motion_files)
 
+        if self.traj_length == 0:
+            raise FileNotFoundError(
+                "No AMP motion files were found. "
+                "Create the dataset symlink at 'dataset/unitree_go2/trot/npz' "
+                "or set the 'RL_MJLAB_GO2_MOTION_DIR' environment variable to a directory "
+                "containing Go2 AMP motion .npz files."
+            )
+
         for i, motion_file in enumerate(motion_files):
             # 1) 名称改为直接取 npz 文件名（去掉后缀）
             name = Path(motion_file).stem
@@ -50,7 +58,7 @@ class AMPLoader:
 
             # 3) 依然按 all_keys 构造 motion_data
             motion_data = {}
-            for key in self.amp_loader_cfg['all_keys']:
+            for key in self.observation_schema['all_keys']:
                 if key in npz_data:
                     arr = npz_data[key]
                     # 保证一维数组变成 (N,1)
@@ -80,7 +88,7 @@ class AMPLoader:
 
             # 6) 拼接、存入 trajectories_full、idx、weights、durations、num_frames
             concatenated_data_all = np.concatenate(
-                [motion_data[key] for key in self.amp_loader_cfg['all_keys'] if key in motion_data], axis=1
+                [motion_data[key] for key in self.observation_schema['all_keys'] if key in motion_data], axis=1
             )
             self.trajectories_full.append(torch.tensor(concatenated_data_all, dtype=torch.float32, device=device))
             self.trajectory_idxs.append(i)
@@ -168,9 +176,9 @@ class AMPLoader:
         rows_lo = big.index_select(0, g_lo)   # [B, TOTAL_SIZE]
         rows_hi = big.index_select(0, g_hi)   # [B, TOTAL_SIZE]
 
-        POS_S, POS_E = self.amp_loader_cfg['ROOT_POS_START_IDX'], self.amp_loader_cfg['ROOT_POS_END_IDX']
-        ROT_S, ROT_E = self.amp_loader_cfg['ROOT_ROT_START_IDX'], self.amp_loader_cfg['ROOT_ROT_END_IDX']
-        AMP_S, AMP_E = ROT_E, self.amp_loader_cfg['TOTAL_SIZE']
+        POS_S, POS_E = self.observation_schema['ROOT_POS_START_IDX'], self.observation_schema['ROOT_POS_END_IDX']
+        ROT_S, ROT_E = self.observation_schema['ROOT_ROT_START_IDX'], self.observation_schema['ROOT_ROT_END_IDX']
+        AMP_S, AMP_E = ROT_E, self.observation_schema['TOTAL_SIZE']
 
         pos_lo, pos_hi = rows_lo[:, POS_S:POS_E], rows_hi[:, POS_S:POS_E]
         rot_lo, rot_hi = rows_lo[:, ROT_S:ROT_E], rows_hi[:, ROT_S:ROT_E]
@@ -187,41 +195,41 @@ class AMPLoader:
         # print("combined_indices:",combined_indices)
         for _ in range(num_mini_batch):
             idxs = np.random.choice(self.preloaded_s.shape[0], size=mini_batch_size)
-            s = self.preloaded_s[idxs][:, self.amp_loader_cfg['combined_indices']]
-            s_next = self.preloaded_s_next[idxs][:, self.amp_loader_cfg['combined_indices']]
+            s = self.preloaded_s[idxs][:, self.observation_schema['combined_indices']]
+            s_next = self.preloaded_s_next[idxs][:, self.observation_schema['combined_indices']]
 
             yield s, s_next
 
     @property
     def observation_dim(self):
-        return len(self.amp_loader_cfg['combined_indices'])
+        return len(self.observation_schema['combined_indices'])
 
     def get_root_pos(self, pose):
-        return pose[self.amp_loader_cfg['ROOT_POS_START_IDX'] : self.amp_loader_cfg['ROOT_POS_END_IDX']]
+        return pose[self.observation_schema['ROOT_POS_START_IDX'] : self.observation_schema['ROOT_POS_END_IDX']]
 
     def get_root_pos_batch(self, poses):
-        return poses[:, self.amp_loader_cfg['ROOT_POS_START_IDX'] : self.amp_loader_cfg['ROOT_POS_END_IDX']]
+        return poses[:, self.observation_schema['ROOT_POS_START_IDX'] : self.observation_schema['ROOT_POS_END_IDX']]
 
     def get_root_rot(self, pose):
-        return pose[self.amp_loader_cfg['ROOT_ROT_START_IDX'] : self.amp_loader_cfg['ROOT_ROT_END_IDX']]
+        return pose[self.observation_schema['ROOT_ROT_START_IDX'] : self.observation_schema['ROOT_ROT_END_IDX']]
 
     def get_linear_vel_batch(self, poses):
-        return poses[:, self.amp_loader_cfg['ROOT_LINEAR_VEL_START_IDX'] : self.amp_loader_cfg['ROOT_LINEAR_VEL_END_IDX']]
+        return poses[:, self.observation_schema['ROOT_LINEAR_VEL_START_IDX'] : self.observation_schema['ROOT_LINEAR_VEL_END_IDX']]
 
     def get_angular_vel_batch(self, poses):
-        return poses[:, self.amp_loader_cfg['ROOT_ANGULAR_VEL_START_IDX'] : self.amp_loader_cfg['ROOT_ANGULAR_VEL_END_IDX']]
+        return poses[:, self.observation_schema['ROOT_ANGULAR_VEL_START_IDX'] : self.observation_schema['ROOT_ANGULAR_VEL_END_IDX']]
 
     def get_root_rot_batch(self, poses):
-        return poses[:, self.amp_loader_cfg['ROOT_ROT_START_IDX'] : self.amp_loader_cfg['ROOT_ROT_END_IDX']]
+        return poses[:, self.observation_schema['ROOT_ROT_START_IDX'] : self.observation_schema['ROOT_ROT_END_IDX']]
 
     def get_joint_pos_batch(self, poses):
-        return poses[:, self.amp_loader_cfg['JOINT_POS_START_IDX'] : self.amp_loader_cfg['JOINT_POS_END_IDX']]
+        return poses[:, self.observation_schema['JOINT_POS_START_IDX'] : self.observation_schema['JOINT_POS_END_IDX']]
 
     def get_joint_vel_batch(self, poses):
-        return poses[:, self.amp_loader_cfg['JOINT_VEL_START_IDX'] : self.amp_loader_cfg['JOINT_VEL_END_IDX']]
+        return poses[:, self.observation_schema['JOINT_VEL_START_IDX'] : self.observation_schema['JOINT_VEL_END_IDX']]
 
     def get_frame_pos_batch(self, poses):
-        return poses[:, self.amp_loader_cfg['FRAME_POS_START_IDX'] : self.amp_loader_cfg['FRAME_POS_END_IDX']]
+        return poses[:, self.observation_schema['FRAME_POS_START_IDX'] : self.observation_schema['FRAME_POS_END_IDX']]
 
     def QuaternionNormalize(self, q):
         """Normalizes the quaternion to length 1.

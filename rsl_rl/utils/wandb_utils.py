@@ -74,6 +74,9 @@ class WandbSummaryWriter(SummaryWriter):
     def save_file(self, path, iter=None):
         wandb.save(path, base_path=os.path.dirname(path))
 
+    def log_video(self, tag: str, path: str, step: int | None = None, fps: int = 30):
+        wandb.log({tag: wandb.Video(path, fps=fps, format="mp4")}, step=step)
+
     """
     Private methods.
     """

@@ -6,9 +6,11 @@
 from __future__ import annotations
 
 import os
+import re
 import statistics
 import time
 from collections import deque
+from pathlib import Path
 
 import torch
 from rl_mjlab_env.utils.amp_utils.motion_loader import AMPLoader
@@ -22,21 +24,20 @@ from rsl_rl.utils import store_code_state
 class AMPOnPolicyRunner:
     """On-policy runner for pure AMP training and evaluation."""
 
+    _VIDEO_STEP_PATTERN = re.compile(r".*-step-(\d+)\.mp4$")
+
     def __init__(self, env: VecEnv, train_cfg: dict, log_dir: str | None = None, device="cuda:0"):
         self.cfg = train_cfg
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
         self.amp_cfg = train_cfg["amp"]
-        self.amp_loader_cfg = train_cfg["amp_loader_cfg"]
         self.device = device
         self.env = env
 
         self._configure_multi_gpu()
 
         robot_data = self.env.unwrapped.scene["robot"].data
-        joint_pos_limits = getattr(robot_data, "default_joint_pos_limits", None)
-        if joint_pos_limits is None:
-            joint_pos_limits = robot_data.soft_joint_pos_limits
+        joint_pos_limits = robot_data.default_joint_pos_limits
         dof_range = joint_pos_limits[0][:, 1] - joint_pos_limits[0][:, 0]
         policy_kwargs = dict(self.policy_cfg)
         min_normalized_std = policy_kwargs.pop("min_normalized_std")
@@ -49,7 +50,7 @@ class AMPOnPolicyRunner:
 
         amp_data = AMPLoader(
             device,
-            amp_loader_cfg=self.amp_loader_cfg,
+            observation_schema=self.amp_cfg["observation_schema"],
             time_between_frames=self.env.step_dt,
             num_preload_transitions=self.amp_cfg["num_preload_transitions"],
             motion_files=self.amp_cfg["motion_files"],
@@ -91,6 +92,11 @@ class AMPOnPolicyRunner:
         self.tot_time = 0
         self.current_learning_iteration = 0
         self.git_status_repos = [__file__]
+        self.video_dir: str | None = None
+        self.video_upload_enabled = False
+        self.video_upload_step_divisor = 1
+        self.video_wandb_key = "Video/train"
+        self.uploaded_video_paths: set[str] = set()
         _ = self.env.reset()
 
     def init_logger(self):
@@ -137,15 +143,7 @@ class AMPOnPolicyRunner:
                     )
                     amp_obs = torch.clone(next_amp_obs).detach()
 
-                    (
-                        obs_dict,
-                        rewards,
-                        dones,
-                        infos,
-                        reset_env_ids,
-                        terminal_amp_states,
-                        _,
-                    ) = self.env.step(actions.to(self.device), amp_out)
+                    obs_dict, rewards, dones, infos = self.env.step(actions.to(self.device), amp_out)
 
                     actor_obs = obs_dict["actor_obs"].to(self.device)
                     critic_obs = obs_dict["critic_obs"].to(self.device)
@@ -154,6 +152,8 @@ class AMPOnPolicyRunner:
                     dones = dones.to(self.device)
 
                     next_amp_obs_with_term = torch.clone(next_amp_obs).detach()
+                    reset_env_ids = infos.get("reset_env_ids")
+                    terminal_amp_states = infos.get("terminal_amp_states")
                     if terminal_amp_states is not None:
                         next_amp_obs_with_term[reset_env_ids] = terminal_amp_states.detach().clone()
 
@@ -186,6 +186,7 @@ class AMPOnPolicyRunner:
                 self.log(locals())
                 if it % self.save_interval == 0:
                     self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
+                self.log_new_videos()
 
             ep_infos.clear()
             if it == start_iter and not self.disable_logs and self.log_dir is not None:
@@ -196,6 +197,7 @@ class AMPOnPolicyRunner:
 
         if self.log_dir is not None and not self.disable_logs:
             self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration}.pt"))
+            self.log_new_videos()
 
     def log(self, locs: dict, width: int = 80, pad: int = 35):
         collection_size = self.num_steps_per_env * self.env.num_envs * self.gpu_world_size
@@ -311,6 +313,27 @@ class AMPOnPolicyRunner:
     def add_git_repo_to_log(self, repo_file_path):
         self.git_status_repos.append(repo_file_path)
 
+    def log_new_videos(self):
+        if not self.video_upload_enabled or self.disable_logs:
+            return
+        if self.writer is None:
+            return
+        if self.video_dir is None:
+            return
+
+        video_dir = Path(self.video_dir)
+        if not video_dir.exists():
+            return
+
+        fps = int(round(self.env.unwrapped.metadata.get("render_fps", 30)))
+        for video_path in sorted(video_dir.glob("*.mp4")):
+            video_key = str(video_path.resolve())
+            if video_key in self.uploaded_video_paths:
+                continue
+            step = self._video_step(video_path)
+            self.writer.log_video(self.video_wandb_key, str(video_path), step=step, fps=fps)
+            self.uploaded_video_paths.add(video_key)
+
     def _configure_multi_gpu(self):
         self.gpu_world_size = int(os.getenv("WORLD_SIZE", "1"))
         self.is_distributed = self.gpu_world_size > 1
@@ -344,3 +367,10 @@ class AMPOnPolicyRunner:
 
         torch.distributed.init_process_group(backend="nccl", rank=self.gpu_global_rank, world_size=self.gpu_world_size)
         torch.cuda.set_device(self.gpu_local_rank)
+
+    def _video_step(self, video_path: Path) -> int | None:
+        match = self._VIDEO_STEP_PATTERN.match(video_path.name)
+        if match is None:
+            return self.current_learning_iteration
+        parsed_step = int(match.group(1)) // self.video_upload_step_divisor
+        return max(parsed_step, self.current_learning_iteration)

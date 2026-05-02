@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import glob
 import math
+import os
+from pathlib import Path
 
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.envs import mdp as envs_mdp
@@ -29,9 +32,18 @@ from rl_mjlab_env.asset_zoo.robots.unitree_go2 import (
     GO2_THIGH_NAMES,
     get_go2_robot_cfg,
 )
-from rl_mjlab_env.tasks.amp_go2 import mdp
+from rl_mjlab_env.rl.config import (
+    AmpAlgorithmCfg,
+    AmpModuleCfg,
+    AmpPolicyCfg,
+    AmpRunnerCfg,
+)
+from rl_mjlab_env.tasks.amp import mdp
 
 COMMAND_NAME = "base_command"
+_DEFAULT_MOTION_DIR = (
+    Path(__file__).resolve().parents[5] / "dataset" / "unitree_go2" / "trot" / "npz"
+)
 ROBOT_JOINT_CFG = SceneEntityCfg(
     "robot", joint_names=list(GO2_JOINT_NAMES), preserve_order=True
 )
@@ -40,7 +52,7 @@ ROBOT_FOOT_BODY_CFG = SceneEntityCfg(
 )
 
 
-def amp_loader_cfg() -> dict:
+def go2_amp_observation_schema() -> dict:
     root_pos_size = 3
     root_rot_size = 4
     root_linear_vel_size = 3
@@ -103,6 +115,30 @@ def amp_loader_cfg() -> dict:
         + list(range(joint_vel_start, joint_vel_end))
         + list(range(frame_pos_start, frame_pos_end)),
     }
+
+
+def go2_motion_files() -> tuple[str, ...]:
+    motion_dir = Path(os.environ.get("RL_MJLAB_GO2_MOTION_DIR", _DEFAULT_MOTION_DIR))
+    return tuple(sorted(glob.glob(str(motion_dir / "*"))))
+
+
+def make_go2_amp_runner_cfg() -> AmpRunnerCfg:
+    return AmpRunnerCfg(
+        clip_actions=100.0,
+        experiment_name="unitree_go2_flat_amp",
+        wandb_tags=("go2", "amp", "flat", "mjlab"),
+        policy=AmpPolicyCfg(
+            num_actor_obs=45,
+            num_critic_obs=48,
+            num_actions=12,
+            min_normalized_std=(0.01, 0.01, 0.01) * 4,
+        ),
+        algorithm=AmpAlgorithmCfg(),
+        amp=AmpModuleCfg(
+            motion_files=go2_motion_files(),
+            observation_schema=go2_amp_observation_schema(),
+        ),
+    )
 
 
 def _observations(play: bool = False) -> dict[str, ObservationGroupCfg]:

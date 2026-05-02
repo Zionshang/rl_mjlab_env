@@ -62,8 +62,4 @@ def foot_positions(
 
 
 def push_vel(env: ManagerBasedRlEnv) -> torch.Tensor:
-    if not hasattr(env, "event_push_vel_buf"):
-        env.event_push_vel_buf = torch.zeros(
-            env.num_envs, 2, device=env.device, dtype=torch.float32
-        )
     return env.event_push_vel_buf

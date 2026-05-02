@@ -15,8 +15,8 @@ dependencies = [
 rl_mjlab_env = "rl_mjlab_env.tasks"
 
 [project.scripts]
-train = "rl_mjlab_env.scripts.train:main"
-play = "rl_mjlab_env.scripts.play:main"
+train_amp = "rl_mjlab_env.scripts.amp.train:main"
+play_amp = "rl_mjlab_env.scripts.amp.play:main"
 
 [tool.setuptools.packages.find]
 where = ["src", "."]

@@ -85,7 +85,7 @@ def undesired_contacts(
 
 
 def amp_reward(env: ManagerBasedRlEnv) -> torch.Tensor:
-    if not hasattr(env, "amp_out"):
+    if env.amp_out is None:
         return torch.zeros(env.num_envs, device=env.device, dtype=torch.float32)
     reward = torch.clamp(1.0 - 0.25 * torch.square(env.amp_out - 1.0), min=0.0)
     return reward.squeeze(-1)

@@ -1,6 +1,5 @@
 """Custom MJLab RL environments."""
 
-from rl_mjlab_env.envs.go2_amp_rl_env import Go2AmpManagerBasedRlEnv
+from rl_mjlab_env.envs.amp_manager_based_rl_env import AmpManagerBasedRlEnv
 
-__all__ = ["Go2AmpManagerBasedRlEnv"]
-
+__all__ = ["AmpManagerBasedRlEnv"]

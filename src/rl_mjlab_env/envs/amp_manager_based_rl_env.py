@@ -1,4 +1,4 @@
-"""MJLab manager-based environment with rl_sim_env AMP step semantics."""
+"""Task-agnostic AMP environment adapter built on MJLab's manager-based env."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from mjlab.envs import types
 from mjlab.envs.manager_based_rl_env import ManagerBasedRlEnv
 
 
-class Go2AmpManagerBasedRlEnv(ManagerBasedRlEnv):
-    """Pure AMP environment adapter for Unitree Go2 flat locomotion."""
+class AmpManagerBasedRlEnv(ManagerBasedRlEnv):
+    """Manager-based RL environment adapter with AMP-specific buffers."""
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -21,6 +21,7 @@ class Go2AmpManagerBasedRlEnv(ManagerBasedRlEnv):
         self.event_push_vel_buf = torch.zeros(
             self.num_envs, 2, device=self.device, dtype=torch.float32
         )
+        self.amp_out: torch.Tensor | None = None
         self.actions_history = torch.zeros(
             self.num_envs,
             3,
@@ -34,13 +35,9 @@ class Go2AmpManagerBasedRlEnv(ManagerBasedRlEnv):
         return self.action_manager.total_action_dim
 
     def update_amp_out(self, amp_out: torch.Tensor | None = None) -> None:
-        if amp_out is not None:
-            self.amp_out = amp_out
+        self.amp_out = amp_out
 
-    def step(
-        self, action: torch.Tensor, amp_out: torch.Tensor | None = None
-    ) -> types.VecEnvStepReturn:
-        self.update_amp_out(amp_out)
+    def step(self, action: torch.Tensor) -> types.VecEnvStepReturn:
         action = action.to(self.device)
         self.actions_history = torch.roll(self.actions_history, shifts=1, dims=1)
         self.actions_history[:, 0, :] = action
@@ -64,13 +61,14 @@ class Go2AmpManagerBasedRlEnv(ManagerBasedRlEnv):
         if self.only_positive_reward:
             self.reward_buf.clamp_(min=0.0)
         self.episode_reward_buf += self.reward_buf
+        episode_reward = self.episode_reward_buf.clone()
         self.metrics_manager.compute()
 
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_ids) > 0 and "amp_obs" in self.observation_manager.active_terms:
             terminal_amp_states = self.observation_manager.compute_group("amp_obs")[
                 reset_env_ids
-            ]
+            ].clone()
         else:
             terminal_amp_states = None
 
@@ -93,15 +91,16 @@ class Go2AmpManagerBasedRlEnv(ManagerBasedRlEnv):
             if isinstance(obs, torch.Tensor):
                 obs.clamp_(-self.clip_obs, self.clip_obs)
 
+        self.extras["reset_env_ids"] = reset_env_ids
+        self.extras["terminal_amp_states"] = terminal_amp_states
+        self.extras["episode_reward"] = episode_reward
+
         return (
             self.obs_buf,
             self.reward_buf,
             self.reset_terminated,
             self.reset_time_outs,
             self.extras,
-            reset_env_ids,
-            terminal_amp_states,
-            self.episode_reward_buf,
         )
 
     def _reset_idx(self, env_ids: torch.Tensor | None = None) -> None:

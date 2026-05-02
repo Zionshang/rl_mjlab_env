@@ -28,7 +28,6 @@ class LocomotionOnPolicyRunner:
         self.training_type = train_cfg["training_type"]
         self.module_cfg_dict = train_cfg["module_cfg_dict"]
         self.train_cfg_dict = train_cfg["train_cfg_dict"]
-        self.amp_loader_cfg = train_cfg["amp_loader_cfg"]
         self.device = device
         self.env = env
 
@@ -66,7 +65,7 @@ class LocomotionOnPolicyRunner:
         if self.use_amp:
             amp_data = AMPLoader(
                 device,
-                amp_loader_cfg=self.amp_loader_cfg ,
+                observation_schema=self.train_cfg_dict["amp"]["observation_schema"],
                 time_between_frames=self.env.step_dt,
                 num_preload_transitions=self.train_cfg_dict['amp']['num_preload_transitions'],
                 motion_files=self.train_cfg_dict['amp']['motion_files'],
@@ -177,15 +176,7 @@ class LocomotionOnPolicyRunner:
                         amp_out = None
                     amp_obs = torch.clone(next_amp_obs).detach()
                     # Step the environment
-                    (
-                        obs_dict,
-                        rewards,
-                        dones,
-                        infos,
-                        reset_env_ids,
-                        terminal_amp_states,
-                        episode_reward,
-                    ) = self.env.step(actions.to(self.device), amp_out)
+                    obs_dict, rewards, dones, infos = self.env.step(actions.to(self.device), amp_out)
 
                     # Move to device
                     obs_dict, rewards, dones = (
@@ -193,6 +184,9 @@ class LocomotionOnPolicyRunner:
                         rewards.to(self.device),
                         dones.to(self.device),
                     )
+                    reset_env_ids = infos.get("reset_env_ids")
+                    terminal_amp_states = infos.get("terminal_amp_states")
+                    episode_reward = infos.get("episode_reward")
                     if 'amp_obs' in obs_dict:
                         next_amp_obs = torch.clone(obs_dict["amp_obs"]).detach()
                         next_amp_obs_with_term = torch.clone(next_amp_obs).detach()
