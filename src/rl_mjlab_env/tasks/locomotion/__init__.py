@@ -11,13 +11,11 @@ from rl_mjlab_env.tasks.locomotion.config.unitree_go2_rough import (
     unitree_go2_locomotion_env_cfg,
 )
 
-TASK_ID = "Mjlab-Locomotion-Rough-Unitree-Go2"
-
 register_mjlab_task(
-    TASK_ID,
+    task_id="Mjlab-Locomotion-Rough-Unitree-Go2",
     env_cfg=unitree_go2_locomotion_env_cfg(play=False),
     play_env_cfg=unitree_go2_locomotion_env_cfg(play=True),
     rl_cfg=make_go2_locomotion_runner_cfg(),
     runner_cls=LocomotionOnPolicyRunner,
 )
-register_env_class(TASK_ID, AmpManagerBasedRlEnv)
+register_env_class(task_id="Mjlab-Locomotion-Rough-Unitree-Go2", env_cls=AmpManagerBasedRlEnv)
