@@ -8,7 +8,6 @@
 from .replay_buffer import ReplayBuffer
 from .rollout_storage import RolloutStorage
 from .rollout_storage_amp import RolloutStorageAmp
-from .rollout_storage_locomotion_seq import RolloutStorageLocomotionSeq
 from .rollout_storage_locomotion import RolloutStorageLocomotion
 
 __all__ = [
@@ -16,5 +15,4 @@ __all__ = [
     "RolloutStorage",
     "RolloutStorageAmp",
     "RolloutStorageLocomotion",
-    "RolloutStorageLocomotionSeq",
 ]
