@@ -17,6 +17,8 @@ rl_mjlab_env = "rl_mjlab_env.tasks"
 [project.scripts]
 train_amp = "rl_mjlab_env.scripts.amp.train:main"
 play_amp = "rl_mjlab_env.scripts.amp.play:main"
+train_locomotion = "rl_mjlab_env.scripts.locomotion.train:main"
+play_locomotion = "rl_mjlab_env.scripts.locomotion.play:main"
 
 [tool.setuptools.packages.find]
 where = ["src", "."]

@@ -17,6 +17,7 @@ from mjlab.tasks.registry import list_tasks, load_env_cfg, load_rl_cfg, load_run
 from mjlab.utils.gpu import select_gpus
 from mjlab.utils.os import dump_yaml, get_checkpoint_path, get_wandb_checkpoint_path
 from mjlab.utils.torch import configure_torch_backends
+from mjlab.utils.wandb import add_wandb_tags
 from mjlab.utils.wrappers import VideoRecorder
 
 from rl_mjlab_env.rl import AmpVecEnvWrapper, LocomotionRunnerCfg
@@ -100,6 +101,9 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
 
     env = AmpVecEnvWrapper(env, clip_actions=cfg.agent.clip_actions)
     runner = runner_cls(env, asdict(cfg.agent), str(log_dir), device)
+    runner.video_dir = str(train_video_dir)
+    runner.video_upload_enabled = rank == 0 and cfg.video and cfg.agent.logger == "wandb"
+    add_wandb_tags(cfg.agent.wandb_tags)
     runner.add_git_repo_to_log(__file__)
     if resume_path is not None:
         runner.load(str(resume_path))
@@ -113,6 +117,10 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
         init_at_random_ep_len=True,
     )
     env.close()
+    if rank == 0:
+        runner.log_new_videos()
+        if runner.writer is not None:
+            runner.writer.stop()
 
 
 def launch_training(task_id: str, cfg: TrainConfig | None = None):

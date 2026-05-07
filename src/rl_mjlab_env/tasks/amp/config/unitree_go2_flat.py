@@ -23,12 +23,12 @@ from mjlab.terrains import TerrainEntityCfg
 from mjlab.utils.noise import UniformNoiseCfg as Unoise
 from mjlab.viewer import ViewerConfig
 
-from rl_mjlab_env.asset_zoo.robots.unitree_go2 import (
+from rl_mjlab_env.asset_zoo.robots.unitree_go2.go2_constants import (
     GO2_BASE_LINK,
     GO2_FOOT_GEOM_NAMES,
     GO2_FOOT_NAMES,
     GO2_FOOT_SITE_NAMES,
-    GO2_JOINT_NAMES,
+    GO2_JOINT_ORDER,
     GO2_THIGH_NAMES,
     get_go2_robot_cfg,
 )
@@ -41,15 +41,9 @@ from rl_mjlab_env.rl.config import (
 from rl_mjlab_env.tasks.amp import mdp
 
 COMMAND_NAME = "base_command"
-_DEFAULT_MOTION_DIR = (
-    Path(__file__).resolve().parents[5] / "dataset" / "unitree_go2" / "trot" / "npz"
-)
-ROBOT_JOINT_CFG = SceneEntityCfg(
-    "robot", joint_names=list(GO2_JOINT_NAMES), preserve_order=True
-)
-ROBOT_FOOT_BODY_CFG = SceneEntityCfg(
-    "robot", site_names=list(GO2_FOOT_SITE_NAMES), preserve_order=True
-)
+_DEFAULT_MOTION_DIR = Path(__file__).resolve().parents[5] / "dataset" / "unitree_go2" / "trot" / "npz"
+ROBOT_JOINT_CFG = SceneEntityCfg("robot", joint_names=tuple(GO2_JOINT_ORDER), preserve_order=True)
+ROBOT_FOOT_BODY_CFG = SceneEntityCfg("robot", site_names=tuple(GO2_FOOT_SITE_NAMES), preserve_order=True)
 
 
 def go2_amp_observation_schema() -> dict:
@@ -87,8 +81,8 @@ def go2_amp_observation_schema() -> dict:
     ]
     frame_pos_keys = [frame + "_position_base" for frame in GO2_FOOT_NAMES]
     frame_vel_keys = [frame + "_velocity_base" for frame in GO2_FOOT_NAMES]
-    joint_pos_keys = [joint + "_q" for joint in GO2_JOINT_NAMES]
-    joint_vel_keys = [joint + "_dq" for joint in GO2_JOINT_NAMES]
+    joint_pos_keys = [joint + "_q" for joint in GO2_JOINT_ORDER]
+    joint_vel_keys = [joint + "_dq" for joint in GO2_JOINT_ORDER]
 
     return {
         "ROOT_POS_START_IDX": root_pos_start,
@@ -226,7 +220,7 @@ def _events(play: bool = False) -> dict[str, EventTermCfg]:
             mode="startup",
             func=dr.body_mass,
             params={
-                "asset_cfg": SceneEntityCfg("robot", body_names=[GO2_BASE_LINK]),
+                "asset_cfg": SceneEntityCfg("robot", body_names=GO2_BASE_LINK),
                 "operation": "add",
                 "ranges": (-1.0, 3.0),
             },
@@ -235,7 +229,7 @@ def _events(play: bool = False) -> dict[str, EventTermCfg]:
             mode="startup",
             func=dr.body_com_offset,
             params={
-                "asset_cfg": SceneEntityCfg("robot", body_names=[GO2_BASE_LINK]),
+                "asset_cfg": SceneEntityCfg("robot", body_names=GO2_BASE_LINK),
                 "operation": "add",
                 "ranges": {0: (-0.05, 0.05), 1: (-0.03, 0.03), 2: (-0.03, 0.05)},
             },
@@ -244,7 +238,7 @@ def _events(play: bool = False) -> dict[str, EventTermCfg]:
             mode="startup",
             func=dr.geom_friction,
             params={
-                "asset_cfg": SceneEntityCfg("robot", geom_names=list(GO2_FOOT_GEOM_NAMES)),
+                "asset_cfg": SceneEntityCfg("robot", geom_names=tuple(GO2_FOOT_GEOM_NAMES)),
                 "operation": "abs",
                 "ranges": (0.25, 1.2),
                 "shared_random": True,
@@ -278,7 +272,7 @@ def _events(play: bool = False) -> dict[str, EventTermCfg]:
             mode="reset",
             func=dr.pd_gains,
             params={
-                "asset_cfg": SceneEntityCfg("robot", actuator_names=list(GO2_JOINT_NAMES)),
+                "asset_cfg": SceneEntityCfg("robot", actuator_names=list(GO2_JOINT_ORDER)),
                 "kp_range": (0.8, 1.2),
                 "kd_range": (0.8, 1.2),
                 "operation": "scale",
@@ -299,8 +293,8 @@ def _events(play: bool = False) -> dict[str, EventTermCfg]:
 def _rewards() -> dict[str, RewardTermCfg]:
     joint_cfg = SceneEntityCfg(
         "robot",
-        joint_names=list(GO2_JOINT_NAMES),
-        actuator_names=list(GO2_JOINT_NAMES),
+        joint_names=tuple(GO2_JOINT_ORDER),
+        actuator_names=list(GO2_JOINT_ORDER),
         preserve_order=True,
     )
     return {
@@ -329,7 +323,7 @@ def _rewards() -> dict[str, RewardTermCfg]:
         "dof_torques_l2": RewardTermCfg(
             func=envs_mdp.joint_torques_l2,
             weight=-1.0e-4,
-            params={"asset_cfg": SceneEntityCfg("robot", actuator_names=list(GO2_JOINT_NAMES), preserve_order=True)},
+            params={"asset_cfg": SceneEntityCfg("robot", actuator_names=list(GO2_JOINT_ORDER), preserve_order=True)},
         ),
         "action_rate_l2": RewardTermCfg(func=envs_mdp.action_rate_l2, weight=-0.01),
         "action_smoothness_l2": RewardTermCfg(func=mdp.action_smoothness_l2, weight=-0.01),
@@ -376,15 +370,12 @@ def unitree_go2_flat_amp_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
             terrain=TerrainEntityCfg(terrain_type="plane"),
             entities={"robot": get_go2_robot_cfg()},
             sensors=(feet_ground_cfg, undesired_contact_cfg),
-            num_envs=64 if play else 4096,
-            env_spacing=2.0,
-            extent=2.0,
         ),
         observations=_observations(play=play),
         actions={
             "joint_pos": JointPositionActionCfg(
                 entity_name="robot",
-                actuator_names=list(GO2_JOINT_NAMES),
+                actuator_names=list(GO2_JOINT_ORDER),
                 scale=0.25,
                 use_default_offset=True,
                 preserve_order=True,
@@ -433,7 +424,7 @@ def unitree_go2_flat_amp_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
             mujoco=MujocoCfg(timestep=0.005, iterations=10, ls_iterations=20),
         ),
         decimation=4,
-        episode_length_s=20.0 if not play else 60.0,
+        episode_length_s=20.0,
         is_finite_horizon=False,
         scale_rewards_by_dt=True,
         seed=42,

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import asdict
+from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 
 try:
@@ -76,6 +77,28 @@ class WandbSummaryWriter(SummaryWriter):
 
     def log_video(self, tag: str, path: str, step: int | None = None, fps: int = 30):
         wandb.log({tag: wandb.Video(path, fps=fps, format="mp4")}, step=step)
+
+    def log_video_directory(
+        self,
+        tag: str,
+        video_dir: str,
+        uploaded_paths: set[str] | None = None,
+        *,
+        fps: int = 30,
+        step: int | None = None,
+    ) -> set[str]:
+        video_dir_path = Path(video_dir)
+        if not video_dir_path.exists():
+            return set() if uploaded_paths is None else uploaded_paths
+
+        seen_paths = set() if uploaded_paths is None else set(uploaded_paths)
+        for video_path in sorted(video_dir_path.glob("*.mp4")):
+            video_key = str(video_path.resolve())
+            if video_key in seen_paths:
+                continue
+            self.log_video(tag, str(video_path), step=step, fps=fps)
+            seen_paths.add(video_key)
+        return seen_paths
 
     """
     Private methods.

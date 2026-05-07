@@ -6,11 +6,9 @@
 from __future__ import annotations
 
 import os
-import re
 import statistics
 import time
 from collections import deque
-from pathlib import Path
 
 import torch
 from rl_mjlab_env.utils.amp_utils.motion_loader import AMPLoader
@@ -23,8 +21,6 @@ from rsl_rl.utils import store_code_state
 
 class AMPOnPolicyRunner:
     """On-policy runner for pure AMP training and evaluation."""
-
-    _VIDEO_STEP_PATTERN = re.compile(r".*-step-(\d+)\.mp4$")
 
     def __init__(self, env: VecEnv, train_cfg: dict, log_dir: str | None = None, device="cuda:0"):
         self.cfg = train_cfg
@@ -94,7 +90,6 @@ class AMPOnPolicyRunner:
         self.git_status_repos = [__file__]
         self.video_dir: str | None = None
         self.video_upload_enabled = False
-        self.video_upload_step_divisor = 1
         self.video_wandb_key = "Video/train"
         self.uploaded_video_paths: set[str] = set()
         _ = self.env.reset()
@@ -321,18 +316,17 @@ class AMPOnPolicyRunner:
         if self.video_dir is None:
             return
 
-        video_dir = Path(self.video_dir)
-        if not video_dir.exists():
+        if not hasattr(self.writer, "log_video_directory"):
             return
 
         fps = int(round(self.env.unwrapped.metadata.get("render_fps", 30)))
-        for video_path in sorted(video_dir.glob("*.mp4")):
-            video_key = str(video_path.resolve())
-            if video_key in self.uploaded_video_paths:
-                continue
-            step = self._video_step(video_path)
-            self.writer.log_video(self.video_wandb_key, str(video_path), step=step, fps=fps)
-            self.uploaded_video_paths.add(video_key)
+        self.uploaded_video_paths = self.writer.log_video_directory(
+            self.video_wandb_key,
+            self.video_dir,
+            self.uploaded_video_paths,
+            fps=fps,
+            step=self.current_learning_iteration,
+        )
 
     def _configure_multi_gpu(self):
         self.gpu_world_size = int(os.getenv("WORLD_SIZE", "1"))
@@ -367,10 +361,3 @@ class AMPOnPolicyRunner:
 
         torch.distributed.init_process_group(backend="nccl", rank=self.gpu_global_rank, world_size=self.gpu_world_size)
         torch.cuda.set_device(self.gpu_local_rank)
-
-    def _video_step(self, video_path: Path) -> int | None:
-        match = self._VIDEO_STEP_PATTERN.match(video_path.name)
-        if match is None:
-            return self.current_learning_iteration
-        parsed_step = int(match.group(1)) // self.video_upload_step_divisor
-        return max(parsed_step, self.current_learning_iteration)

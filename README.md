@@ -15,21 +15,9 @@ mkdir -p dataset/unitree_go2/trot
 ln -s /path/to/unitree_go2/trot/npz dataset/unitree_go2/trot/npz
 ```
 
-## Train
+## Commands
 
-```bash
-train_amp Mjlab-AMP-Flat-Unitree-Go2 \
-  --gpu-ids [0] \
-  --env.scene.num-envs 4096 \
-  --video True \
-  --agent.max-iterations 10000
-```
-
-## Play
-
-```bash
-play_amp Mjlab-AMP-Flat-Unitree-Go2 \
-  --checkpoint-file path/to/checkpoint.pt \
-  --num-envs 4 \
-  --viewer viser
-```
+| Algorithm | Train | Play |
+| --- | --- | --- |
+| AMP | `train_amp Mjlab-AMP-Flat-Unitree-Go2 --gpu-ids [0] --env.scene.num-envs 4096 --video True --agent.max-iterations 10000` | `play_amp Mjlab-AMP-Flat-Unitree-Go2 --num-envs 4 --viewer viser --checkpoint-file path/to/checkpoint.pt` |
+| Locomotion | `train_locomotion Mjlab-Locomotion-Rough-Unitree-Go2 --gpu-ids [0] --env.scene.num-envs 4096 --video True --agent.max-iterations 10000` | `play_locomotion Mjlab-Locomotion-Rough-Unitree-Go2 --num-envs 4 --viewer viser --checkpoint-file path/to/checkpoint.pt` |

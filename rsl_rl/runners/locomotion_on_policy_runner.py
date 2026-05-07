@@ -134,6 +134,10 @@ class LocomotionOnPolicyRunner:
         self.tot_time = 0
         self.current_learning_iteration = 0
         self.git_status_repos = [__file__]
+        self.video_dir: str | None = None
+        self.video_upload_enabled = False
+        self.video_wandb_key = "Video/train"
+        self.uploaded_video_paths: set[str] = set()
         _ = self.env.reset()
 
     def init_logger(self):
@@ -259,6 +263,7 @@ class LocomotionOnPolicyRunner:
                 # Save model
                 if it % self.save_interval == 0:
                     self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
+                self.log_new_videos()
 
             # Clear episode infos
             ep_infos.clear()
@@ -277,6 +282,7 @@ class LocomotionOnPolicyRunner:
         # Save the final model after training
         if self.log_dir is not None and not self.disable_logs:
             self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration}.pt"))
+            self.log_new_videos()
 
     def log(self, locs: dict, width: int = 80, pad: int = 35):
         # Compute the collection size
@@ -454,6 +460,25 @@ class LocomotionOnPolicyRunner:
 
     def add_git_repo_to_log(self, repo_file_path):
         self.git_status_repos.append(repo_file_path)
+
+    def log_new_videos(self):
+        if not self.video_upload_enabled or self.disable_logs:
+            return
+        if self.writer is None:
+            return
+        if self.video_dir is None:
+            return
+        if not hasattr(self.writer, "log_video_directory"):
+            return
+
+        fps = int(round(self.env.unwrapped.metadata.get("render_fps", 30)))
+        self.uploaded_video_paths = self.writer.log_video_directory(
+            self.video_wandb_key,
+            self.video_dir,
+            self.uploaded_video_paths,
+            fps=fps,
+            step=self.current_learning_iteration,
+        )
 
     """
     Helper functions.

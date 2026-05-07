@@ -27,7 +27,6 @@ from rl_mjlab_env.tasks.env_classes import load_env_class
 @dataclass(frozen=True)
 class TrainConfig(MjlabTrainConfig):
     agent: AmpRunnerCfg
-    upload_video_to_wandb: bool = True
 
     @staticmethod
     def from_task(task_id: str) -> "TrainConfig":
@@ -111,10 +110,7 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
 
     runner = runner_cls(env, asdict(cfg.agent), str(log_dir), device)
     runner.video_dir = str(train_video_dir)
-    runner.video_upload_enabled = (
-        rank == 0 and cfg.video and cfg.upload_video_to_wandb and cfg.agent.logger == "wandb"
-    )
-    runner.video_upload_step_divisor = cfg.agent.num_steps_per_env
+    runner.video_upload_enabled = rank == 0 and cfg.video and cfg.agent.logger == "wandb"
 
     add_wandb_tags(cfg.agent.wandb_tags)
     runner.add_git_repo_to_log(__file__)

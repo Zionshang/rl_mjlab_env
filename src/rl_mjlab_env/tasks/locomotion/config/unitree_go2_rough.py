@@ -36,7 +36,7 @@ from rl_mjlab_env.asset_zoo.robots.unitree_go2.go2_constants import (
     GO2_CALF_NAMES,
     GO2_FOOT_GEOM_NAMES,
     GO2_FOOT_SITE_NAMES,
-    GO2_JOINT_NAMES,
+    GO2_JOINT_ORDER,
     GO2_THIGH_NAMES,
     get_go2_robot_cfg,
 )
@@ -48,21 +48,11 @@ from rl_mjlab_env.tasks.amp.config.unitree_go2_flat import (
 from rl_mjlab_env.tasks.locomotion import mdp
 
 COMMAND_NAME = "base_command"
-ROBOT_JOINT_CFG = SceneEntityCfg(
-    "robot", joint_names=list(GO2_JOINT_NAMES), preserve_order=True
-)
-ROBOT_ACTUATOR_CFG = SceneEntityCfg(
-    "robot", actuator_names=list(GO2_JOINT_NAMES), preserve_order=True
-)
-ROBOT_FOOT_BODY_CFG = SceneEntityCfg(
-    "robot", site_names=list(GO2_FOOT_SITE_NAMES), preserve_order=True
-)
-ROBOT_FOOT_GEOM_CFG = SceneEntityCfg(
-    "robot", geom_names=list(GO2_FOOT_GEOM_NAMES), preserve_order=True
-)
-ROBOT_BASE_BODY_CFG = SceneEntityCfg(
-    "robot", body_names=[GO2_BASE_LINK], preserve_order=True
-)
+ROBOT_JOINT_CFG = SceneEntityCfg("robot", joint_names=tuple(GO2_JOINT_ORDER), preserve_order=True)
+ROBOT_ACTUATOR_CFG = SceneEntityCfg("robot", actuator_names=list(GO2_JOINT_ORDER), preserve_order=True)
+ROBOT_FOOT_BODY_CFG = SceneEntityCfg("robot", site_names=tuple(GO2_FOOT_SITE_NAMES), preserve_order=True)
+ROBOT_FOOT_GEOM_CFG = SceneEntityCfg("robot", geom_names=tuple(GO2_FOOT_GEOM_NAMES), preserve_order=True)
+ROBOT_BASE_BODY_CFG = SceneEntityCfg("robot", body_names=GO2_BASE_LINK, preserve_order=True)
 
 
 def make_go2_locomotion_runner_cfg() -> LocomotionRunnerCfg:
@@ -161,6 +151,8 @@ def make_go2_locomotion_runner_cfg() -> LocomotionRunnerCfg:
             },
         },
     )
+
+
 def _actor_terms(play: bool) -> dict[str, ObservationTermCfg]:
     return {
         "base_ang_vel": ObservationTermCfg(
@@ -419,6 +411,8 @@ def _events(play: bool = False) -> dict[str, EventTermCfg]:
         ):
             events.pop(key, None)
     return events
+
+
 def _rewards(play: bool = False) -> dict[str, RewardTermCfg]:
     rewards = {
         "track_lin_vel_xy_exp": RewardTermCfg(
@@ -456,8 +450,8 @@ def _rewards(play: bool = False) -> dict[str, RewardTermCfg]:
             params={
                 "asset_cfg": SceneEntityCfg(
                     "robot",
-                    joint_names=list(GO2_JOINT_NAMES),
-                    actuator_names=list(GO2_JOINT_NAMES),
+                    joint_names=tuple(GO2_JOINT_ORDER),
+                    actuator_names=list(GO2_JOINT_ORDER),
                     preserve_order=True,
                 )
             },
@@ -468,8 +462,8 @@ def _rewards(play: bool = False) -> dict[str, RewardTermCfg]:
             params={
                 "asset_cfg": SceneEntityCfg(
                     "robot",
-                    joint_names=list(GO2_JOINT_NAMES),
-                    actuator_names=list(GO2_JOINT_NAMES),
+                    joint_names=tuple(GO2_JOINT_ORDER),
+                    actuator_names=list(GO2_JOINT_ORDER),
                     preserve_order=True,
                 )
             },
@@ -519,14 +513,12 @@ def unitree_go2_locomotion_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
             ),
             entities={"robot": get_go2_robot_cfg()},
             sensors=(terrain_scan, undesired_contact),
-            num_envs=50 if play else 4096,
-            extent=2.5 if play else 2.0,
         ),
         observations=_observations(play=play),
         actions={
             "joint_pos": JointPositionActionCfg(
                 entity_name="robot",
-                actuator_names=list(GO2_JOINT_NAMES),
+                actuator_names=list(GO2_JOINT_ORDER),
                 scale=0.25,
                 use_default_offset=True,
                 preserve_order=True,
@@ -558,14 +550,16 @@ def unitree_go2_locomotion_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
                 params={"limit_angle": 1.4},
             ),
         },
-        curriculum={
-            "terrain_levels": CurriculumTermCfg(
-                func=terrain_levels_vel,
-                params={"command_name": COMMAND_NAME},
-            )
-        }
-        if not play
-        else {},
+        curriculum=(
+            {
+                "terrain_levels": CurriculumTermCfg(
+                    func=terrain_levels_vel,
+                    params={"command_name": COMMAND_NAME},
+                )
+            }
+            if not play
+            else {}
+        ),
         metrics={},
         viewer=ViewerConfig(
             origin_type=ViewerConfig.OriginType.ASSET_BODY,
@@ -590,7 +584,7 @@ def unitree_go2_locomotion_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
             ),
         ),
         decimation=4,
-        episode_length_s=60.0 if play else 20.0,
+        episode_length_s=20.0,
         is_finite_horizon=False,
         scale_rewards_by_dt=True,
         seed=42,
