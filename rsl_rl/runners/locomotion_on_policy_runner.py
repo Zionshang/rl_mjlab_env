@@ -22,6 +22,20 @@ from rsl_rl.utils import store_code_state
 class LocomotionOnPolicyRunner:
     """On-policy runner for training and evaluation."""
 
+    def _ensure_extra_obs(self, obs_dict):
+        if not self.use_vae or "estimator_out" in obs_dict:
+            return obs_dict
+
+        estimator_dim = self.module_cfg_dict["vae"]["decoder_in_dim"]
+        actor_obs = obs_dict["actor_obs"]
+        obs_dict["estimator_out"] = torch.zeros(
+            actor_obs.shape[0],
+            estimator_dim,
+            device=actor_obs.device,
+            dtype=actor_obs.dtype,
+        )
+        return obs_dict
+
     def __init__(self, env: VecEnv, train_cfg: dict, log_dir: str | None = None, device="cuda:0"):
         self.cfg = train_cfg
         self.policy_type = train_cfg["policy_type"]
@@ -99,6 +113,7 @@ class LocomotionOnPolicyRunner:
 
         # init storage and model
         obs_dict = self.env.get_observations()
+        obs_dict = self._ensure_extra_obs(obs_dict)
 
         self.alg.init_storage(
             training_type=self.cfg["training_type"],
@@ -139,6 +154,7 @@ class LocomotionOnPolicyRunner:
 
         # start learning
         obs_dict = self.env.get_observations()
+        obs_dict = self._ensure_extra_obs(obs_dict)
         obs_dict = obs_dict.to(self.device)
         amp_obs = obs_dict["amp_obs"].clone()
         next_amp_obs = obs_dict["amp_obs"].clone()

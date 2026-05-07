@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import glob
 import math
-import os
 from pathlib import Path
 
 from mjlab.envs import ManagerBasedRlEnvCfg
@@ -28,6 +27,7 @@ from rl_mjlab_env.asset_zoo.robots.unitree_go2 import (
     GO2_BASE_LINK,
     GO2_FOOT_GEOM_NAMES,
     GO2_FOOT_NAMES,
+    GO2_FOOT_SITE_NAMES,
     GO2_JOINT_NAMES,
     GO2_THIGH_NAMES,
     get_go2_robot_cfg,
@@ -48,7 +48,7 @@ ROBOT_JOINT_CFG = SceneEntityCfg(
     "robot", joint_names=list(GO2_JOINT_NAMES), preserve_order=True
 )
 ROBOT_FOOT_BODY_CFG = SceneEntityCfg(
-    "robot", body_names=list(GO2_FOOT_NAMES), preserve_order=True
+    "robot", site_names=list(GO2_FOOT_SITE_NAMES), preserve_order=True
 )
 
 
@@ -118,8 +118,7 @@ def go2_amp_observation_schema() -> dict:
 
 
 def go2_motion_files() -> tuple[str, ...]:
-    motion_dir = Path(os.environ.get("RL_MJLAB_GO2_MOTION_DIR", _DEFAULT_MOTION_DIR))
-    return tuple(sorted(glob.glob(str(motion_dir / "*"))))
+    return tuple(sorted(glob.glob(str(_DEFAULT_MOTION_DIR / "*"))))
 
 
 def make_go2_amp_runner_cfg() -> AmpRunnerCfg:

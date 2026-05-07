@@ -43,9 +43,8 @@ class AMPLoader:
         if self.traj_length == 0:
             raise FileNotFoundError(
                 "No AMP motion files were found. "
-                "Create the dataset symlink at 'dataset/unitree_go2/trot/npz' "
-                "or set the 'RL_MJLAB_GO2_MOTION_DIR' environment variable to a directory "
-                "containing Go2 AMP motion .npz files."
+                "Expected Go2 AMP motion .npz files under "
+                "'dataset/unitree_go2/trot/npz'."
             )
 
         for i, motion_file in enumerate(motion_files):

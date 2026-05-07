@@ -7,9 +7,14 @@
 
 from .replay_buffer import ReplayBuffer
 from .rollout_storage import RolloutStorage
-from .rollout_storage_amp_vae import RolloutStorageAMPVAE
 from .rollout_storage_amp import RolloutStorageAmp
 from .rollout_storage_locomotion_seq import RolloutStorageLocomotionSeq
 from .rollout_storage_locomotion import RolloutStorageLocomotion
 
-__all__ = ["RolloutStorage", "RolloutStorageAMPVAE", "ReplayBuffer", "RolloutStorageAmp", "RolloutStorageLocomotionSeq", "RolloutStorageLocomotion"]
+__all__ = [
+    "ReplayBuffer",
+    "RolloutStorage",
+    "RolloutStorageAmp",
+    "RolloutStorageLocomotion",
+    "RolloutStorageLocomotionSeq",
+]

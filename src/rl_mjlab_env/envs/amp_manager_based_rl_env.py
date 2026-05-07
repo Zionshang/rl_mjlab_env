@@ -11,15 +11,15 @@ from mjlab.envs.manager_based_rl_env import ManagerBasedRlEnv
 class AmpManagerBasedRlEnv(ManagerBasedRlEnv):
     """Manager-based RL environment adapter with AMP-specific buffers."""
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, cfg, device: str, render_mode: str | None = None, **kwargs) -> None:
+        self.event_push_vel_buf = torch.zeros(
+            cfg.scene.num_envs, 2, device=device, dtype=torch.float32
+        )
+        super().__init__(cfg=cfg, device=device, render_mode=render_mode, **kwargs)
         self.clip_obs = 100.0
         self.only_positive_reward = True
         self.episode_reward_buf = torch.zeros(
             self.num_envs, device=self.device, dtype=torch.float32
-        )
-        self.event_push_vel_buf = torch.zeros(
-            self.num_envs, 2, device=self.device, dtype=torch.float32
         )
         self.amp_out: torch.Tensor | None = None
         self.actions_history = torch.zeros(

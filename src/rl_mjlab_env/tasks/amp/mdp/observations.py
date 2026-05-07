@@ -52,7 +52,10 @@ def foot_positions(
     env: ManagerBasedRlEnv, asset_cfg: SceneEntityCfg
 ) -> torch.Tensor:
     asset: Entity = env.scene[asset_cfg.name]
-    foot_pos_w = asset.data.body_link_pos_w[:, asset_cfg.body_ids, :]
+    if asset_cfg.site_names is not None:
+        foot_pos_w = asset.data.site_pos_w[:, asset_cfg.site_ids, :]
+    else:
+        foot_pos_w = asset.data.body_link_pos_w[:, asset_cfg.body_ids, :]
     root_pos_w = asset.data.root_link_pos_w[:, None, :]
     root_quat_w = asset.data.root_link_quat_w[:, None, :].expand_as(
         torch.cat([foot_pos_w, foot_pos_w[..., :1]], dim=-1)

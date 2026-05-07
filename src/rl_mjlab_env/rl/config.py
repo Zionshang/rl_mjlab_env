@@ -73,4 +73,26 @@ class AmpRunnerCfg:
     amp: AmpModuleCfg = field(default_factory=AmpModuleCfg)
 
 
+@dataclass
+class LocomotionRunnerCfg:
+    seed: int = 42
+    device: str = "cuda:0"
+    num_steps_per_env: int = 24
+    max_iterations: int = 100000
+    save_interval: int = 500
+    experiment_name: str = "go2_locomotion"
+    run_name: str = ""
+    resume: bool = False
+    load_run: str = ".*"
+    load_checkpoint: str = "model_.*.pt"
+    clip_actions: float | None = None
+    logger: str = "wandb"
+    wandb_project: str = "mjlab"
+    wandb_tags: tuple[str, ...] = ()
+    policy_type: dict[str, str] = field(default_factory=dict)
+    training_type: str = "rl"
+    module_cfg_dict: dict[str, Any] = field(default_factory=dict)
+    train_cfg_dict: dict[str, Any] = field(default_factory=dict)
+
+
 RslRlAmpOnPolicyRunnerCfg = AmpRunnerCfg
