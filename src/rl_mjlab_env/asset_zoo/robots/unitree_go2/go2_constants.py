@@ -12,7 +12,7 @@ from mjlab.utils.spec_config import CollisionCfg
 # MJCF and assets.
 ##
 
-GO2_XML: Path = Path(__file__).parent / "xmls" / "go2" / "go2.xml"
+GO2_XML: Path = Path(__file__).parent / "xmls" / "go2.xml"
 assert GO2_XML.exists()
 
 
