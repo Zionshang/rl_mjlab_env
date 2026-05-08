@@ -1,4 +1,4 @@
-"""Observation terms for Go2 locomotion."""
+"""Observation terms for Go2 AMPVAE tasks."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Train locomotion tasks with the vendored RSL-RL locomotion runner."""
+"""Train AMPVAE tasks with the vendored RSL-RL AMPVAE runner."""
 
 from __future__ import annotations
 
@@ -20,28 +20,28 @@ from mjlab.utils.torch import configure_torch_backends
 from mjlab.utils.wandb import add_wandb_tags
 from mjlab.utils.wrappers import VideoRecorder
 
-from rl_mjlab_env.rl import AmpVecEnvWrapper, LocomotionRunnerCfg
+from rl_mjlab_env.rl import AmpVecEnvWrapper, AmpvaeRunnerCfg
 from rl_mjlab_env.tasks.env_classes import load_env_class
 
 
-def list_locomotion_tasks() -> list[str]:
+def list_ampvae_tasks() -> list[str]:
     task_ids = []
     for task_id in list_tasks():
-        if isinstance(load_rl_cfg(task_id), LocomotionRunnerCfg):
+        if isinstance(load_rl_cfg(task_id), AmpvaeRunnerCfg):
             task_ids.append(task_id)
     return sorted(task_ids)
 
 
 @dataclass(frozen=True)
 class TrainConfig(MjlabTrainConfig):
-    agent: LocomotionRunnerCfg
+    agent: AmpvaeRunnerCfg
 
     @staticmethod
     def from_task(task_id: str) -> "TrainConfig":
         env_cfg = load_env_cfg(task_id)
         agent_cfg = load_rl_cfg(task_id)
         assert isinstance(env_cfg, ManagerBasedRlEnvCfg)
-        assert isinstance(agent_cfg, LocomotionRunnerCfg)
+        assert isinstance(agent_cfg, AmpvaeRunnerCfg)
         return TrainConfig(env=env_cfg, agent=agent_cfg)
 
 
@@ -157,7 +157,7 @@ def launch_training(task_id: str, cfg: TrainConfig | None = None):
 def main() -> None:
     import rl_mjlab_env.tasks  # noqa: F401
 
-    all_tasks = list_locomotion_tasks()
+    all_tasks = list_ampvae_tasks()
     chosen_task, remaining_args = tyro.cli(
         tyro.extras.literal_type_from_choices(all_tasks),
         add_help=False,

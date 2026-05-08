@@ -7,7 +7,7 @@
 
 from .amp_discriminator import AMPDiscriminator
 from .actor_critic import ActorCritic
-from .actor_critic_locomotion import ActorCriticEncoder
+from .actor_critic_ampvae import ActorCriticEncoder
 from .actor_critic_recurrent import ActorCriticRecurrent
 from .normalizer import EmpiricalNormalization
 from .student_teacher import StudentTeacher

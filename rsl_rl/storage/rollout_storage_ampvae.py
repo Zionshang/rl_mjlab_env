@@ -11,7 +11,7 @@ from tensordict import TensorDict
 from rsl_rl.utils import split_and_pad_trajectories
 
 
-class RolloutStorageLocomotion:
+class RolloutStorageAMPVAE:
     class Transition:
         def __init__(self):
             self.observations = None

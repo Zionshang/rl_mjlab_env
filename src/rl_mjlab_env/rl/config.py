@@ -74,13 +74,13 @@ class AmpRunnerCfg:
 
 
 @dataclass
-class LocomotionRunnerCfg:
+class AmpvaeRunnerCfg:
     seed: int = 42
     device: str = "cuda:0"
     num_steps_per_env: int = 24
     max_iterations: int = 100000
     save_interval: int = 500
-    experiment_name: str = "go2_locomotion"
+    experiment_name: str = "go2_ampvae"
     run_name: str = ""
     resume: bool = False
     load_run: str = ".*"

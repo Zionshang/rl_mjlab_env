@@ -1,4 +1,4 @@
-"""Play locomotion tasks."""
+"""Play AMPVAE tasks."""
 
 from __future__ import annotations
 
@@ -18,14 +18,14 @@ from mjlab.utils.torch import configure_torch_backends
 from mjlab.utils.wrappers import VideoRecorder
 from mjlab.viewer import NativeMujocoViewer, ViserPlayViewer
 
-from rl_mjlab_env.rl import AmpVecEnvWrapper, LocomotionRunnerCfg
+from rl_mjlab_env.rl import AmpVecEnvWrapper, AmpvaeRunnerCfg
 from rl_mjlab_env.tasks.env_classes import load_env_class
 
 
-def list_locomotion_tasks() -> list[str]:
+def list_ampvae_tasks() -> list[str]:
     task_ids = []
     for task_id in list_tasks():
-        if isinstance(load_rl_cfg(task_id), LocomotionRunnerCfg):
+        if isinstance(load_rl_cfg(task_id), AmpvaeRunnerCfg):
             task_ids.append(task_id)
     return sorted(task_ids)
 
@@ -52,7 +52,7 @@ def run_play(task_id: str, cfg: PlayConfig):
     device = cfg.device or ("cuda:0" if torch.cuda.is_available() else "cpu")
     env_cfg = load_env_cfg(task_id, play=True)
     agent_cfg = load_rl_cfg(task_id)
-    assert isinstance(agent_cfg, LocomotionRunnerCfg)
+    assert isinstance(agent_cfg, AmpvaeRunnerCfg)
 
     dummy_mode = cfg.agent in {"zero", "random"}
     trained_mode = not dummy_mode
@@ -165,7 +165,7 @@ def run_play(task_id: str, cfg: PlayConfig):
 def main() -> None:
     import rl_mjlab_env.tasks  # noqa: F401
 
-    all_tasks = list_locomotion_tasks()
+    all_tasks = list_ampvae_tasks()
     chosen_task, remaining_args = tyro.cli(
         tyro.extras.literal_type_from_choices(all_tasks),
         add_help=False,

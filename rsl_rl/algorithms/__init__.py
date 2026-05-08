@@ -7,7 +7,7 @@
 
 from .distillation import Distillation
 from .amp_ppo import AMPPPO
-from .locomotion_ppo import LocomotionPPO
+from .ampvae_ppo import AMPVAEPPO
 from .ppo import PPO
 
-__all__ = ["AMPPPO", "Distillation", "LocomotionPPO", "PPO"]
+__all__ = ["AMPVAEPPO", "AMPPPO", "Distillation", "PPO"]

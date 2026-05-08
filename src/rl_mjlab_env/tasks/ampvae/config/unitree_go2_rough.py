@@ -1,4 +1,4 @@
-"""Unitree Go2 rough-terrain locomotion configuration."""
+"""Unitree Go2 rough-terrain AMPVAE configuration."""
 
 from __future__ import annotations
 
@@ -40,12 +40,12 @@ from rl_mjlab_env.asset_zoo.robots.unitree_go2.go2_constants import (
     GO2_THIGH_NAMES,
     get_go2_robot_cfg,
 )
-from rl_mjlab_env.rl import LocomotionRunnerCfg
+from rl_mjlab_env.rl import AmpvaeRunnerCfg
 from rl_mjlab_env.tasks.amp.config.unitree_go2_flat import (
     go2_amp_observation_schema,
     go2_motion_files,
 )
-from rl_mjlab_env.tasks.locomotion import mdp
+from rl_mjlab_env.tasks.ampvae import mdp
 
 COMMAND_NAME = "base_command"
 ROBOT_JOINT_CFG = SceneEntityCfg("robot", joint_names=tuple(GO2_JOINT_ORDER), preserve_order=True)
@@ -55,11 +55,11 @@ ROBOT_FOOT_GEOM_CFG = SceneEntityCfg("robot", geom_names=tuple(GO2_FOOT_GEOM_NAM
 ROBOT_BASE_BODY_CFG = SceneEntityCfg("robot", body_names=GO2_BASE_LINK, preserve_order=True)
 
 
-def make_go2_locomotion_runner_cfg() -> LocomotionRunnerCfg:
-    return LocomotionRunnerCfg(
+def make_go2_ampvae_runner_cfg() -> AmpvaeRunnerCfg:
+    return AmpvaeRunnerCfg(
         clip_actions=100.0,
-        experiment_name="unitree_go2_locomotion",
-        wandb_tags=("go2", "locomotion", "amp", "vae", "mjlab"),
+        experiment_name="unitree_go2_ampvae",
+        wandb_tags=("go2", "ampvae", "amp", "vae", "mjlab"),
         policy_type={
             "actor_critic_type": "ActorCriticEncoder",
             "vae_type": "VAEBlind",
@@ -480,7 +480,7 @@ def _rewards(play: bool = False) -> dict[str, RewardTermCfg]:
     return rewards
 
 
-def unitree_go2_locomotion_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
+def unitree_go2_ampvae_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
     terrain_scan = RayCastSensorCfg(
         name="terrain_scan",
         frame=ObjRef(type="body", name=GO2_BASE_LINK, entity="robot"),

@@ -13,13 +13,13 @@ from collections import deque
 import torch
 from rl_mjlab_env.utils.amp_utils.motion_loader import AMPLoader
 from rl_mjlab_env.utils.amp_utils.normalizer import Normalizer
-from rsl_rl.algorithms import LocomotionPPO
+from rsl_rl.algorithms import AMPVAEPPO
 from rsl_rl.env import VecEnv
 from rsl_rl.modules import ActorCriticEncoder, AMPDiscriminator, VAEBlind
 from rsl_rl.utils import store_code_state
 
 
-class LocomotionOnPolicyRunner:
+class AMPVAEOnPolicyRunner:
     """On-policy runner for training and evaluation."""
 
     def _ensure_extra_obs(self, obs_dict):
@@ -100,7 +100,7 @@ class LocomotionOnPolicyRunner:
             module_dict['vae'] = vae
 
         # initialize algorithm
-        self.alg = LocomotionPPO(
+        self.alg = AMPVAEPPO(
             module_dict=module_dict,
             train_cfg_dict=self.train_cfg_dict,
             device=self.device,

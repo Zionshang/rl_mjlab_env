@@ -10,10 +10,10 @@ import torch.nn as nn
 import torch.optim as optim
 from rl_mjlab_env.utils.amp_utils.normalizer import Normalizer
 from rsl_rl.modules import ActorCriticEncoder, AMPDiscriminator
-from rsl_rl.storage import ReplayBuffer, RolloutStorageLocomotion
+from rsl_rl.storage import ReplayBuffer, RolloutStorageAMPVAE
 
 
-class LocomotionPPO:
+class AMPVAEPPO:
     """Proximal Policy Optimization algorithm (https://arxiv.org/abs/1707.06347)."""
 
     def __init__(
@@ -108,8 +108,8 @@ class LocomotionPPO:
         self.optimizer_dict['actor_critic'] = optim.Adam(actor_critic_params)
 
         # Create rollout storage
-        self.storage: RolloutStorageLocomotion = None  # type: ignore
-        self.transition = RolloutStorageLocomotion.Transition()
+        self.storage: RolloutStorageAMPVAE = None  # type: ignore
+        self.transition = RolloutStorageAMPVAE.Transition()
 
         # PPO parameters
         self.clip_param = train_cfg_dict['ppo_algorithm']['clip_param']
@@ -136,7 +136,7 @@ class LocomotionPPO:
         device,
     ):
         # create rollout storage
-        self.storage = RolloutStorageLocomotion(
+        self.storage = RolloutStorageAMPVAE(
             training_type,
             num_envs,
             num_transitions_per_env,
