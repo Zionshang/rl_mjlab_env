@@ -1,7 +1,7 @@
 """Unitree Go2 AMP tasks."""
 
 from mjlab.tasks.registry import register_mjlab_task
-from rsl_rl.runners import AMPOnPolicyRunner
+from rsl_rl_local.runners import AMPOnPolicyRunner
 
 from rl_mjlab_env.envs import AmpManagerBasedRlEnv
 from rl_mjlab_env.tasks.amp.config.unitree_go2_flat import (

@@ -22,8 +22,8 @@ play_ampvae = "rl_mjlab_env.scripts.ampvae.play:main"
 
 [tool.setuptools.packages.find]
 where = ["src", "."]
-include = ["rl_mjlab_env*", "rsl_rl*"]
+include = ["rl_mjlab_env*", "rsl_rl_local*"]
 
 [tool.ruff]
-src = ["src", "rsl_rl"]
+src = ["src", "rsl_rl_local"]
 indent-width = 4

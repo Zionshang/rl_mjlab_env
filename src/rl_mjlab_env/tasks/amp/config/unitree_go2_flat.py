@@ -118,7 +118,7 @@ def go2_motion_files() -> tuple[str, ...]:
 def make_go2_amp_runner_cfg() -> AmpRunnerCfg:
     return AmpRunnerCfg(
         clip_actions=100.0,
-        experiment_name="unitree_go2_flat_amp",
+        experiment_name="go2_flat_amp",
         wandb_tags=("go2", "amp", "flat", "mjlab"),
         policy=AmpPolicyCfg(
             num_actor_obs=45,
@@ -389,7 +389,7 @@ def unitree_go2_flat_amp_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
                 rel_heading_envs=1.0,
                 heading_command=True,
                 heading_control_stiffness=0.5,
-                debug_vis=play,
+                debug_vis=True,
                 ranges=UniformVelocityCommandCfg.Ranges(
                     lin_vel_x=(-1.0, 1.0),
                     lin_vel_y=(-0.5, 0.5),

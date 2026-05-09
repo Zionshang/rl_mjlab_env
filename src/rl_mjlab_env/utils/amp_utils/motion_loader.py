@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from rsl_rl.utils.log_print import (
+from rsl_rl_local.utils.log_print import (
     print_placeholder_end,
     print_placeholder_start,
 )

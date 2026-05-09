@@ -44,7 +44,7 @@ def run_play(task_id: str, cfg: PlayConfig):
     log_dir: Path | None = None
     resume_path: Path | None = None
     if trained_mode:
-        log_root_path = (Path("logs") / "rsl_rl" / agent_cfg.experiment_name).resolve()
+        log_root_path = (Path("logs") / "rsl_rl_local" / agent_cfg.experiment_name).resolve()
         if cfg.checkpoint_file is not None:
             resume_path = Path(cfg.checkpoint_file)
             if not resume_path.exists():

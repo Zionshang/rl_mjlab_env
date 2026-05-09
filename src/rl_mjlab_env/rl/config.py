@@ -80,7 +80,7 @@ class AmpvaeRunnerCfg:
     num_steps_per_env: int = 24
     max_iterations: int = 100000
     save_interval: int = 500
-    experiment_name: str = "go2_ampvae"
+    experiment_name: str = ""
     run_name: str = ""
     resume: bool = False
     load_run: str = ".*"

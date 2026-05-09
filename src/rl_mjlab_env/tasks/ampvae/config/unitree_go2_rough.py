@@ -58,7 +58,7 @@ ROBOT_BASE_BODY_CFG = SceneEntityCfg("robot", body_names=GO2_BASE_LINK, preserve
 def make_go2_ampvae_runner_cfg() -> AmpvaeRunnerCfg:
     return AmpvaeRunnerCfg(
         clip_actions=100.0,
-        experiment_name="unitree_go2_ampvae",
+        experiment_name="go2_ampvae",
         wandb_tags=("go2", "ampvae", "amp", "vae", "mjlab"),
         policy_type={
             "actor_critic_type": "ActorCriticEncoder",
@@ -489,7 +489,7 @@ def unitree_go2_ampvae_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
         max_distance=5.0,
         exclude_parent_body=True,
         include_geom_groups=(0,),
-        debug_vis=play,
+        debug_vis=True,
     )
     undesired_contact = ContactSensorCfg(
         name="undesired_contact",
@@ -532,7 +532,7 @@ def unitree_go2_ampvae_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
                 rel_heading_envs=1.0,
                 heading_command=True,
                 heading_control_stiffness=0.5,
-                debug_vis=play,
+                debug_vis=True,
                 ranges=UniformVelocityCommandCfg.Ranges(
                     lin_vel_x=(-1.0, 1.0),
                     lin_vel_y=(-0.5, 0.5),

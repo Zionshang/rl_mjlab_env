@@ -137,7 +137,7 @@ def run_train(task_id: str, cfg: TrainConfig, log_dir: Path) -> None:
 def launch_training(task_id: str, cfg: TrainConfig | None = None):
     cfg = cfg or TrainConfig.from_task(task_id)
 
-    log_root_path = Path("logs") / "rsl_rl" / cfg.agent.experiment_name
+    log_root_path = Path("logs") / "rsl_rl_local" / cfg.agent.experiment_name
     log_root_path.resolve()
     log_dir_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     if cfg.agent.run_name:

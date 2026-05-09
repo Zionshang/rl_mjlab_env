@@ -1,6 +1,6 @@
 """Unitree Go2 AMPVAE tasks."""
 
-from rsl_rl.runners import AMPVAEOnPolicyRunner
+from rsl_rl_local.runners import AMPVAEOnPolicyRunner
 
 from mjlab.tasks.registry import register_mjlab_task
 
