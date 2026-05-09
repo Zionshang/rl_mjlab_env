@@ -6,7 +6,7 @@ from rl_mjlab_env.rl.config import (
     AmpModuleCfg,
     AmpPolicyCfg,
     AmpRunnerCfg,
-    RslRlAmpOnPolicyRunnerCfg,
+    RslRlOnPolicyRunnerAMPCfg,
 )
 from rl_mjlab_env.rl.vecenv_wrapper_amp import AmpVecEnvWrapper
 
@@ -17,5 +17,5 @@ __all__ = [
     "AmpPolicyCfg",
     "AmpRunnerCfg",
     "AmpVecEnvWrapper",
-    "RslRlAmpOnPolicyRunnerCfg",
+    "RslRlOnPolicyRunnerAMPCfg",
 ]

@@ -95,4 +95,4 @@ class AmpvaeRunnerCfg:
     train_cfg_dict: dict[str, Any] = field(default_factory=dict)
 
 
-RslRlAmpOnPolicyRunnerCfg = AmpRunnerCfg
+RslRlOnPolicyRunnerAMPCfg = AmpRunnerCfg

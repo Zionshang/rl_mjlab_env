@@ -1,6 +1,6 @@
 """Unitree Go2 AMPVAE tasks."""
 
-from rsl_rl_local.runners import AMPVAEOnPolicyRunner
+from rsl_rl_local.runners import OnPolicyRunnerAMPVAE
 
 from mjlab.tasks.registry import register_mjlab_task
 
@@ -16,6 +16,6 @@ register_mjlab_task(
     env_cfg=unitree_go2_ampvae_env_cfg(play=False),
     play_env_cfg=unitree_go2_ampvae_env_cfg(play=True),
     rl_cfg=make_go2_ampvae_runner_cfg(),
-    runner_cls=AMPVAEOnPolicyRunner,
+    runner_cls=OnPolicyRunnerAMPVAE,
 )
 register_env_class(task_id="Mjlab-AMPVAE-Rough-Unitree-Go2", env_cls=AmpManagerBasedRlEnv)

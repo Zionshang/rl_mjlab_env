@@ -13,7 +13,7 @@ from rsl_rl_local.modules import ActorCriticEncoder, AMPDiscriminator
 from rsl_rl_local.storage import ReplayBuffer, RolloutStorageAMPVAE
 
 
-class AMPVAEPPO:
+class PPOAMPVAE:
     """Proximal Policy Optimization algorithm (https://arxiv.org/abs/1707.06347)."""
 
     def __init__(

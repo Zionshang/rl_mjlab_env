@@ -5,7 +5,7 @@
 
 """AMP and AMPVAE runners."""
 
-from .amp_on_policy_runner import AMPOnPolicyRunner
-from .ampvae_on_policy_runner import AMPVAEOnPolicyRunner
+from .on_policy_runner_amp import OnPolicyRunnerAMP
+from .on_policy_runner_ampvae import OnPolicyRunnerAMPVAE
 
-__all__ = ["AMPOnPolicyRunner", "AMPVAEOnPolicyRunner"]
+__all__ = ["OnPolicyRunnerAMP", "OnPolicyRunnerAMPVAE"]

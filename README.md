@@ -19,5 +19,5 @@ ln -s /path/to/unitree_go2/trot/npz dataset/unitree_go2/trot/npz
 
 | Algorithm | Train | Play |
 | --- | --- | --- |
-| AMP | `train_amp Mjlab-AMP-Flat-Unitree-Go2 --gpu-ids [0] --env.scene.num-envs 4096 --video True --agent.max-iterations 10000` | `play_amp Mjlab-AMP-Flat-Unitree-Go2 --num-envs 4 --viewer viser --checkpoint-file path/to/checkpoint.pt` |
-| AMPVAE | `train_ampvae Mjlab-AMPVAE-Rough-Unitree-Go2 --gpu-ids [0] --env.scene.num-envs 4096 --video True --agent.max-iterations 10000` | `play_ampvae Mjlab-AMPVAE-Rough-Unitree-Go2 --num-envs 4 --viewer viser --checkpoint-file path/to/checkpoint.pt` |
+| AMP | `train_amp Mjlab-AMP-Flat-Unitree-Go2 --gpu-ids [0] --env.scene.num-envs 4096 --video True --env.viewer.max-extra-envs 8 --agent.max-iterations 10000` | `play_amp Mjlab-AMP-Flat-Unitree-Go2 --num-envs 4 --viewer viser --checkpoint-file path/to/checkpoint.pt` |
+| AMPVAE | `train_ampvae Mjlab-AMPVAE-Rough-Unitree-Go2 --gpu-ids [0] --env.scene.num-envs 4096 --video True --env.viewer.max-extra-envs 8 --agent.max-iterations 10000` | `play_ampvae Mjlab-AMPVAE-Rough-Unitree-Go2 --num-envs 4 --viewer viser --checkpoint-file path/to/checkpoint.pt` |

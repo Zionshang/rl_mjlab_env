@@ -5,7 +5,7 @@
 
 """AMP and AMPVAE algorithm implementations."""
 
-from .amp_ppo import AMPPPO
-from .ampvae_ppo import AMPVAEPPO
+from .ppo_amp import PPOAMP
+from .ppo_ampvae import PPOAMPVAE
 
-__all__ = ["AMPVAEPPO", "AMPPPO"]
+__all__ = ["PPOAMPVAE", "PPOAMP"]

@@ -12,7 +12,7 @@ from rsl_rl_local.modules import AMPDiscriminator
 from rsl_rl_local.storage import ReplayBuffer, RolloutStorageAmp
 
 
-class AMPPPO:
+class PPOAMP:
     """Pure AMP PPO algorithm."""
 
     def __init__(
