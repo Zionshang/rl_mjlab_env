@@ -152,5 +152,13 @@ if __name__ == "__main__":
 
   from mjlab.entity.entity import Entity
 
-  robot = Entity(get_go2_robot_cfg())
+  robot = Entity(get_go2_x5_robot_cfg())
+  robot.spec.worldbody.add_geom(
+    name="debug_ground",
+    type=mujoco.mjtGeom.mjGEOM_PLANE,
+    size=(4.0, 4.0, 1.0),
+  )
+  robot.spec.worldbody.add_light(
+    name="debug_sun",
+    type=mujoco.mjtLightType.mjLIGHT_DIRECTIONAL)
   viewer.launch(robot.spec.compile())
