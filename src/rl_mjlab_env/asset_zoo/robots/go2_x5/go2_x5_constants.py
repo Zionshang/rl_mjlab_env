@@ -12,7 +12,7 @@ from mjlab.utils.spec_config import CollisionCfg
 # MJCF and assets.
 ##
 
-GO2_X5_XML: Path = Path(__file__).parent / "xmls" / "go2_x5.xml"
+GO2_X5_XML: Path = Path(__file__).parent / "xmls" / "go2_x5_fixed_gripper.xml"
 assert GO2_X5_XML.exists()
 
 
@@ -46,14 +46,22 @@ GO2_X5_ARM_JOINT_ORDER = (
   "joint4",
   "joint5",
   "joint6",
-  "joint7",
-  "joint8",
 )
-GO2_X5_ARM_CONTROL_JOINT_ORDER = GO2_X5_ARM_JOINT_ORDER[:6]
+GO2_X5_ARM_CONTROL_JOINT_ORDER = GO2_X5_ARM_JOINT_ORDER
 GO2_X5_JOINT_ORDER = GO2_X5_LEG_JOINT_ORDER + GO2_X5_ARM_JOINT_ORDER
 GO2_X5_CONTROL_JOINT_ORDER = GO2_X5_LEG_JOINT_ORDER + GO2_X5_ARM_CONTROL_JOINT_ORDER
 GO2_X5_THIGH_NAMES = ("FL_thigh", "FR_thigh", "RL_thigh", "RR_thigh")
 GO2_X5_CALF_NAMES = ("FL_calf", "FR_calf", "RL_calf", "RR_calf")
+GO2_X5_CALF_GEOM_NAMES = (
+  "FL_calf1_collision",
+  "FL_calf2_collision",
+  "FR_calf1_collision",
+  "FR_calf2_collision",
+  "RL_calf1_collision",
+  "RL_calf2_collision",
+  "RR_calf1_collision",
+  "RR_calf2_collision",
+)
 GO2_X5_FOOT_NAMES = ("FL_foot", "FR_foot", "RL_foot", "RR_foot")
 GO2_X5_FOOT_SITE_NAMES = ("FL", "FR", "RL", "RR")
 GO2_X5_FOOT_GEOM_NAMES = (
@@ -73,7 +81,6 @@ GO2_X5_ARM_BODY_NAMES = (
   "link7",
   "link8",
 )
-GO2_X5_GRIPPER_JOINT_NAMES = ("joint7", "joint8")
 GO2_X5_GRIPPER_TIP_GEOM_NAMES = ("link7_tip_collision", "link8_tip_collision")
 
 ##
@@ -84,18 +91,18 @@ GO2_X5_ACTUATOR_HIP = BuiltinPositionActuatorCfg(
   target_names_expr=(
     ".*hip_.*",
   ),
-  stiffness=20.0,
+  stiffness=40.0,
   damping=1.0,
-  effort_limit=23.5,
+  effort_limit=40.5,
   armature=0.01,
 )
 GO2_X5_ACTUATOR_THIGH = BuiltinPositionActuatorCfg(
   target_names_expr=(
     ".*thigh_.*",
   ),
-  stiffness=20.0,
+  stiffness=40.0,
   damping=1.0,
-  effort_limit=23.5,
+  effort_limit=40.5,
   armature=0.01,
 )
 GO2_X5_ACTUATOR_CALF = BuiltinPositionActuatorCfg(
@@ -103,8 +110,8 @@ GO2_X5_ACTUATOR_CALF = BuiltinPositionActuatorCfg(
     ".*calf_.*",
   ),
   stiffness=40.0,
-  damping=2.0,
-  effort_limit=45.0,
+  damping=1.0,
+  effort_limit=40.5,
   armature=0.02,
 )
 
@@ -136,34 +143,24 @@ X5_ACTUATOR_JOINT456 = BuiltinPositionActuatorCfg(
   armature=X5_ARMATURE,
   frictionloss=0.3,
 )
-X5_ACTUATOR_GRIPPER = BuiltinPositionActuatorCfg(
-  target_names_expr=GO2_X5_GRIPPER_JOINT_NAMES,
-  stiffness=50.0,
-  damping=20.0,
-  effort_limit=3.0,
-  armature=X5_ARMATURE,
-  frictionloss=0.0,
-)
-
 ##
 # Keyframes.
 ##
 
 INIT_STATE = EntityCfg.InitialStateCfg(
-  pos=(0.0, 0.0, 0.32),
+  pos=(0.0, 0.0, 0.35),
   joint_pos={
-    ".*thigh_joint": 0.9,
-    ".*calf_joint": -1.8,
     ".*L_hip_joint": 0.1,
     ".*R_hip_joint": -0.1,
+    "F[LR]_thigh_joint": 0.8,
+    "R[LR]_thigh_joint": 1.0,
+    ".*_calf_joint": -1.5,
     "joint1": 0.0,
     "joint2": 0.0,
     "joint3": 0.0,
     "joint4": 0.0,
     "joint5": 0.0,
     "joint6": 0.0,
-    "joint7": 0.0,
-    "joint8": 0.0,
   },
   joint_vel={".*": 0.0},
 )
@@ -208,7 +205,6 @@ GO2_X5_ARTICULATION = EntityArticulationInfoCfg(
     X5_ACTUATOR_JOINT1,
     X5_ACTUATOR_JOINT23,
     X5_ACTUATOR_JOINT456,
-    X5_ACTUATOR_GRIPPER,
   ),
   soft_joint_pos_limit_factor=0.9,
 )

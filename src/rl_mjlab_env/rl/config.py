@@ -96,3 +96,60 @@ class AmpvaeRunnerCfg:
 
 
 RslRlOnPolicyRunnerAMPCfg = AmpRunnerCfg
+
+
+@dataclass
+class Go2ArmRunnerCfg:
+    seed: int = 42
+    device: str = "cuda:0"
+    num_steps_per_env: int = 24
+    max_iterations: int = 15000
+    save_interval: int = 1000
+    experiment_name: str = "unitree_go2_x5_flat"
+    run_name: str = ""
+    resume: bool = False
+    load_run: str = ".*"
+    load_checkpoint: str = "model_.*.pt"
+    clip_actions: float | None = 100.0
+    logger: str = "wandb"
+    wandb_project: str = "mjlab"
+    wandb_tags: tuple[str, ...] = ()
+    empirical_normalization: bool = False
+    policy: dict[str, Any] = field(
+        default_factory=lambda: {
+            "class_name": "ActorCritic",
+            "init_noise_std": 1.0,
+            "actor_hidden_dims": [256],
+            "critic_hidden_dims": [256],
+            "activation": "elu",
+            "activation_out": "elu",
+            "leg_control_head_hidden_dims": [256, 128],
+            "arm_control_head_hidden_dims": [256, 128],
+            "critic_leg_control_head_hidden_dims": [256, 128, 64],
+            "critic_arm_control_head_hidden_dims": [256, 128, 64],
+            "priv_encoder_dims": [32, 18],
+            "num_leg_actions": 12,
+            "num_arm_actions": 6,
+        }
+    )
+    algorithm: dict[str, Any] = field(
+        default_factory=lambda: {
+            "class_name": "PPO",
+            "value_loss_coef": 1.0,
+            "use_clipped_value_loss": True,
+            "clip_param": 0.2,
+            "entropy_coef": 0.005,
+            "num_learning_epochs": 5,
+            "num_mini_batches": 4,
+            "learning_rate": 1.0e-3,
+            "schedule": "adaptive",
+            "gamma": 0.99,
+            "lam": 0.95,
+            "desired_kl": 0.01,
+            "max_grad_norm": 1.0,
+            "dagger_update_freq": 20,
+            "priv_reg_coef_schedual": [0, 0.1, 1500, 5000],
+            "mixing_schedule": [1.0, 0, 4000],
+            "eps": 1.0e-5,
+        }
+    )
