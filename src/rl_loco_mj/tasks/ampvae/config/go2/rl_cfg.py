@@ -1,11 +1,11 @@
 """RL configuration for the Go2 VAE+AMP task."""
 
-from rl_mjlab_env.asset_zoo.robots.go2.go2_constants import (
+from rl_loco_mj.asset_zoo.robots.go2.go2_constants import (
   GO2_AMP_DATA_DIR,
   GO2_FOOT_NAMES,
   GO2_JOINT_ORDER,
 )
-from rl_mjlab_env.rl import AmpCfg, AmpDataCfg, VaeAmpOnPolicyRunnerCfg
+from rl_loco_mj.rl import AmpCfg, AmpDataCfg, VaeAmpOnPolicyRunnerCfg
 
 
 def unitree_go2_ampvae_runner_cfg() -> VaeAmpOnPolicyRunnerCfg:

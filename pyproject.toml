@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rl-mjlab-env"
+name = "rl-loco-mj"
 version = "0.1.0"
 description = "MJLab reinforcement-learning environments."
 requires-python = ">=3.10,<3.14"
@@ -13,18 +13,18 @@ dependencies = [
 ]
 
 [project.entry-points."mjlab.tasks"]
-rl_mjlab_env = "rl_mjlab_env.tasks"
+rl_loco_mj = "rl_loco_mj.tasks"
 
 [project.scripts]
-train_ampvae = "rl_mjlab_env.scripts.ampvae.train:main"
-play_ampvae = "rl_mjlab_env.scripts.ampvae.play:main"
+train_ampvae = "rl_loco_mj.scripts.ampvae.train:main"
+play_ampvae = "rl_loco_mj.scripts.ampvae.play:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["rl_mjlab_env*"]
+include = ["rl_loco_mj*"]
 
 [tool.setuptools.package-data]
-rl_mjlab_env = [
+rl_loco_mj = [
   "asset_zoo/robots/*/xmls/*.xml",
   "asset_zoo/robots/*/xmls/assets/*.obj",
 ]

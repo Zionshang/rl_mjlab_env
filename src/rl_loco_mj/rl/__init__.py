@@ -1,6 +1,6 @@
 """RL adapters and configs."""
 
-from rl_mjlab_env.rl.config import (
+from rl_loco_mj.rl.config import (
   AmpCfg,
   AmpDataCfg,
   VaeAmpOnPolicyRunnerCfg,
@@ -8,7 +8,7 @@ from rl_mjlab_env.rl.config import (
   VaeAmpPpoAlgorithmCfg,
   VaeCfg,
 )
-from rl_mjlab_env.rl.vae_amp_vecenv_wrapper import VaeAmpVecEnvWrapper
+from rl_loco_mj.rl.vae_amp_vecenv_wrapper import VaeAmpVecEnvWrapper
 
 __all__ = [
   "AmpCfg",

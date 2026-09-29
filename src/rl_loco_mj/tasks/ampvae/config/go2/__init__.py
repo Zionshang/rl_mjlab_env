@@ -3,8 +3,8 @@
 from mjlab.tasks.registry import register_mjlab_task
 from rsl_rl_local.runners import VaeAmpOnPolicyRunner
 
-from rl_mjlab_env.envs import VaeAmpRlEnv
-from rl_mjlab_env.tasks.env_classes import register_env_class
+from rl_loco_mj.envs import VaeAmpRlEnv
+from rl_loco_mj.tasks.env_classes import register_env_class
 
 from .env_cfgs import unitree_go2_ampvae_env_cfg
 from .rl_cfg import unitree_go2_ampvae_runner_cfg

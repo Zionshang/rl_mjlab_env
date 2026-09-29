@@ -30,7 +30,7 @@ from mjlab.terrains.config import ROUGH_TERRAINS_CFG
 from mjlab.utils.noise import UniformNoiseCfg as Unoise
 from mjlab.viewer import ViewerConfig
 
-from rl_mjlab_env.asset_zoo.robots.go2.go2_constants import (
+from rl_loco_mj.asset_zoo.robots.go2.go2_constants import (
   GO2_BASE_LINK,
   GO2_CALF_GEOM_NAMES,
   GO2_FOOT_GEOM_NAMES,
@@ -39,8 +39,8 @@ from rl_mjlab_env.asset_zoo.robots.go2.go2_constants import (
   GO2_THIGH_GEOM_NAMES,
   get_go2_robot_cfg,
 )
-from rl_mjlab_env.envs import VaeAmpRlEnvCfg
-from rl_mjlab_env.tasks.ampvae import mdp
+from rl_loco_mj.envs import VaeAmpRlEnvCfg
+from rl_loco_mj.tasks.ampvae import mdp
 
 COMMAND_NAME = "base_command"
 POLICY_DECIMATION = 4

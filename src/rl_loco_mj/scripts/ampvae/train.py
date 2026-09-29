@@ -20,8 +20,8 @@ from mjlab.utils.torch import configure_torch_backends
 from mjlab.utils.wandb import add_wandb_tags
 from mjlab.utils.wrappers import VideoRecorder
 
-from rl_mjlab_env.rl import VaeAmpOnPolicyRunnerCfg, VaeAmpVecEnvWrapper
-from rl_mjlab_env.tasks.env_classes import load_env_class
+from rl_loco_mj.rl import VaeAmpOnPolicyRunnerCfg, VaeAmpVecEnvWrapper
+from rl_loco_mj.tasks.env_classes import load_env_class
 
 
 def list_ampvae_tasks() -> list[str]:
@@ -161,7 +161,7 @@ def launch_training(task_id: str, cfg: TrainConfig | None = None):
 
 
 def main() -> None:
-  import rl_mjlab_env.tasks  # noqa: F401
+  import rl_loco_mj.tasks  # noqa: F401
 
   all_tasks = list_ampvae_tasks()
   chosen_task, remaining_args = tyro.cli(
