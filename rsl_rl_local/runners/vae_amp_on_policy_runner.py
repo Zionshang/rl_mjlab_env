@@ -11,37 +11,37 @@ import time
 from collections import deque
 
 import torch
-from rl_mjlab_env.utils.amp_utils.motion_loader import AMPLoader
-from rl_mjlab_env.utils.amp_utils.normalizer import Normalizer
-from rsl_rl_local.algorithms import PPOAMPVAE
+
+from rsl_rl_local.algorithms import VaeAmpPPO
 from rsl_rl_local.env import VecEnv
-from rsl_rl_local.modules import ActorCriticEncoder, AMPDiscriminator, VAEBlind
+from rsl_rl_local.modules import ActorCriticVae, AMPDiscriminator, VAEBlind
 from rsl_rl_local.utils import store_code_state
+from rsl_rl_local.utils.amp_utils.motion_loader import AMPLoader
+from rsl_rl_local.utils.amp_utils.normalizer import Normalizer
 
 
-class OnPolicyRunnerAMPVAE:
-    """On-policy runner for training and evaluation."""
-
-    def _ensure_extra_obs(self, obs_dict):
-        if not self.use_vae or "estimator_out" in obs_dict:
-            return obs_dict
-
-        estimator_dim = self.module_cfg_dict["vae"]["decoder_in_dim"]
-        actor_obs = obs_dict["actor_obs"]
-        obs_dict["estimator_out"] = torch.zeros(
-            actor_obs.shape[0],
-            estimator_dim,
-            device=actor_obs.device,
-            dtype=actor_obs.dtype,
-        )
-        return obs_dict
+class VaeAmpOnPolicyRunner:
+    """On-policy runner for the VAE+AMP method."""
 
     def __init__(self, env: VecEnv, train_cfg: dict, log_dir: str | None = None, device="cuda:0"):
         self.cfg = train_cfg
-        self.policy_type = train_cfg["policy_type"]
-        self.training_type = train_cfg["training_type"]
-        self.module_cfg_dict = train_cfg["module_cfg_dict"]
-        self.train_cfg_dict = train_cfg["train_cfg_dict"]
+        self.policy_cfg = train_cfg["policy"]
+        self.algorithm_cfg = train_cfg["algorithm"]
+        self.amp_cfg = train_cfg["amp"]
+        self.vae_cfg = train_cfg["vae"]
+        self.amp_loader_cfg = self.amp_cfg["data"]
+        self.train_cfg_dict = {
+            "use_amp": self.amp_cfg["enabled"],
+            "use_vae": self.vae_cfg["enabled"],
+            "ppo_algorithm": self.algorithm_cfg,
+            "amp": {
+                "amp_replay_buffer_size": self.amp_cfg["replay_buffer_size"],
+                "amp_disc_grad_penalty": self.amp_cfg["discriminator_grad_penalty"],
+                "motion_files": self.amp_cfg["motion_files"],
+                "num_preload_transitions": self.amp_cfg["num_preload_transitions"],
+            },
+            "vae": self.vae_cfg,
+        }
         self.device = device
         self.env = env
 
@@ -54,12 +54,19 @@ class OnPolicyRunnerAMPVAE:
         # check if use vae
         self.use_vae = self.train_cfg_dict["use_vae"] if "use_vae" in self.train_cfg_dict else False
         if self.use_vae:
-            self.use_vae_exclusive_optimizer = self.train_cfg_dict["vae"]["use_exclusive_optimizer"] if "use_exclusive_optimizer" in self.train_cfg_dict["vae"] else False
+            self.use_vae_exclusive_optimizer = (
+                self.train_cfg_dict["vae"]["use_exclusive_optimizer"]
+                if "use_exclusive_optimizer" in self.train_cfg_dict["vae"]
+                else False
+            )
         else:
             self.use_vae_exclusive_optimizer = False
 
         # get number of observations
         num_actions = self.env.num_actions
+        obs_dict = self.env.get_observations()
+        observation_dims = {name: value.shape[-1] for name, value in obs_dict.items()}
+        vae_output_dim = sum(self.vae_cfg["encoder_head_dim_dict"].values()) if self.use_vae else 0
 
         # evaluate the policy class
         module_dict = {}
@@ -68,39 +75,47 @@ class OnPolicyRunnerAMPVAE:
             self.env.unwrapped.scene["robot"].data.default_joint_pos_limits[0][:, 1]
             - self.env.unwrapped.scene["robot"].data.default_joint_pos_limits[0][:, 0]
         )
-        min_std = torch.tensor(self.module_cfg_dict['actor_critic']['min_normalized_std'], device=self.device) * (torch.abs(dof_range))
-        self.module_cfg_dict['actor_critic']['min_normalized_std'] = min_std
-        actor_critic: ActorCriticEncoder = eval(self.cfg["policy_type"]["actor_critic_type"])(
-            self.module_cfg_dict['actor_critic']
+        min_std = torch.tensor(self.policy_cfg["min_normalized_std"], device=self.device) * torch.abs(dof_range)
+        self.policy_cfg["min_normalized_std"] = min_std
+        actor_critic = ActorCriticVae(
+            self.policy_cfg,
+            observation_dims=observation_dims,
+            num_actions=num_actions,
+            use_vae=self.use_vae,
+            vae_output_dim=vae_output_dim,
         ).to(self.device)
-        module_dict['actor_critic'] = actor_critic
+        module_dict["actor_critic"] = actor_critic
 
         # AMP
         if self.use_amp:
             amp_data = AMPLoader(
                 device,
-                observation_schema=self.train_cfg_dict["amp"]["observation_schema"],
+                amp_loader_cfg=self.amp_loader_cfg,
                 time_between_frames=self.env.step_dt,
-                num_preload_transitions=self.train_cfg_dict['amp']['num_preload_transitions'],
-                motion_files=self.train_cfg_dict['amp']['motion_files'],
+                num_preload_transitions=self.train_cfg_dict["amp"]["num_preload_transitions"],
+                motion_files=self.train_cfg_dict["amp"]["motion_files"],
             )
             amp_normalizer = Normalizer(amp_data.observation_dim)
             amp_discriminator: AMPDiscriminator = AMPDiscriminator(
                 amp_data.observation_dim * 2,
-                self.module_cfg_dict['amp']['hidden_dims'],
+                self.amp_cfg["hidden_dims"],
                 device,
             ).to(self.device)
-            module_dict['amp_discriminator'] = amp_discriminator
-            module_dict['amp_normalizer'] = amp_normalizer
-            module_dict['amp_data'] = amp_data
+            module_dict["amp_discriminator"] = amp_discriminator
+            module_dict["amp_normalizer"] = amp_normalizer
+            module_dict["amp_data"] = amp_data
 
         # VAE
         if self.use_vae:
-            vae: VAEBlind = eval(self.cfg["policy_type"]["vae_type"])(self.module_cfg_dict['vae']).to(self.device)
-            module_dict['vae'] = vae
+            vae = VAEBlind(
+                self.vae_cfg,
+                encoder_input_dim=observation_dims["estimator_obs"],
+                decoder_output_dim=observation_dims["next_obs"],
+            ).to(self.device)
+            module_dict["vae"] = vae
 
         # initialize algorithm
-        self.alg = PPOAMPVAE(
+        self.alg = VaeAmpPPO(
             module_dict=module_dict,
             train_cfg_dict=self.train_cfg_dict,
             device=self.device,
@@ -112,14 +127,20 @@ class OnPolicyRunnerAMPVAE:
         self.save_interval = self.cfg["save_interval"]
 
         # init storage and model
-        obs_dict = self.env.get_observations()
-        obs_dict = self._ensure_extra_obs(obs_dict)
+        storage_obs = obs_dict.clone()
+        if self.use_vae:
+            storage_obs["estimator_out"] = torch.zeros(
+                self.env.num_envs,
+                vae_output_dim,
+                device=self.device,
+                dtype=storage_obs["actor_obs"].dtype,
+            )
 
         self.alg.init_storage(
-            training_type=self.cfg["training_type"],
+            training_type="rl",
             num_envs=self.env.num_envs,
             num_transitions_per_env=self.num_steps_per_env,
-            obs=obs_dict,
+            obs=storage_obs,
             action_shape=[num_actions],
             device=self.device,
         )
@@ -134,15 +155,11 @@ class OnPolicyRunnerAMPVAE:
         self.tot_time = 0
         self.current_learning_iteration = 0
         self.git_status_repos = [__file__]
-        self.video_dir: str | None = None
-        self.video_upload_enabled = False
-        self.video_wandb_key = "Video/train"
-        self.uploaded_video_paths: set[str] = set()
         _ = self.env.reset()
 
     def init_logger(self):
         if self.log_dir is not None and self.writer is None and not self.disable_logs:
-            from rsl_rl_local.utils.wandb_utils import WandbSummaryWriter
+            from rsl_rl_local.utils import WandbSummaryWriter
 
             self.writer = WandbSummaryWriter(log_dir=self.log_dir, flush_secs=10, cfg=self.cfg)
             self.writer.log_config(self.env.cfg, self.cfg)
@@ -158,7 +175,6 @@ class OnPolicyRunnerAMPVAE:
 
         # start learning
         obs_dict = self.env.get_observations()
-        obs_dict = self._ensure_extra_obs(obs_dict)
         obs_dict = obs_dict.to(self.device)
         amp_obs = obs_dict["amp_obs"].clone()
         next_amp_obs = obs_dict["amp_obs"].clone()
@@ -197,6 +213,8 @@ class OnPolicyRunnerAMPVAE:
                     amp_obs = torch.clone(next_amp_obs).detach()
                     # Step the environment
                     obs_dict, rewards, dones, infos = self.env.step(actions.to(self.device), amp_out)
+                    reset_env_ids = infos["reset_env_ids"]
+                    terminal_amp_states = infos["terminal_amp_states"]
 
                     # Move to device
                     obs_dict, rewards, dones = (
@@ -204,10 +222,7 @@ class OnPolicyRunnerAMPVAE:
                         rewards.to(self.device),
                         dones.to(self.device),
                     )
-                    reset_env_ids = infos.get("reset_env_ids")
-                    terminal_amp_states = infos.get("terminal_amp_states")
-                    episode_reward = infos.get("episode_reward")
-                    if 'amp_obs' in obs_dict:
+                    if "amp_obs" in obs_dict:
                         next_amp_obs = torch.clone(obs_dict["amp_obs"]).detach()
                         next_amp_obs_with_term = torch.clone(next_amp_obs).detach()
                     else:
@@ -263,12 +278,11 @@ class OnPolicyRunnerAMPVAE:
                 # Save model
                 if it % self.save_interval == 0:
                     self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
-                self.log_new_videos()
 
             # Clear episode infos
             ep_infos.clear()
             # Save code state
-            if it == start_iter and not self.disable_logs:
+            if it == start_iter and self.log_dir is not None and not self.disable_logs:
                 # obtain all the diff files
                 git_file_paths = store_code_state(self.log_dir, self.git_status_repos)
                 # if possible store them to wandb
@@ -282,7 +296,6 @@ class OnPolicyRunnerAMPVAE:
         # Save the final model after training
         if self.log_dir is not None and not self.disable_logs:
             self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration}.pt"))
-            self.log_new_videos()
 
     def log(self, locs: dict, width: int = 80, pad: int = 35):
         # Compute the collection size
@@ -380,7 +393,7 @@ class OnPolicyRunnerAMPVAE:
         # -- Save model
         saved_dict = {
             "model_state_dict": self.alg.actor_critic.state_dict(),
-            "actor_critic_optimizer_state_dict": self.alg.optimizer_dict['actor_critic'].state_dict(),
+            "actor_critic_optimizer_state_dict": self.alg.optimizer_dict["actor_critic"].state_dict(),
             "iter": self.current_learning_iteration,
             "infos": infos,
         }
@@ -397,7 +410,7 @@ class OnPolicyRunnerAMPVAE:
                 "vae_state_dict": self.alg.vae.state_dict(),
             }
             if self.use_vae_exclusive_optimizer:
-                saved_dict_vae["vae_optimizer_state_dict"] = self.alg.optimizer_dict['vae'].state_dict()
+                saved_dict_vae["vae_optimizer_state_dict"] = self.alg.optimizer_dict["vae"].state_dict()
             saved_dict.update(saved_dict_vae)
 
         # save model
@@ -460,25 +473,6 @@ class OnPolicyRunnerAMPVAE:
 
     def add_git_repo_to_log(self, repo_file_path):
         self.git_status_repos.append(repo_file_path)
-
-    def log_new_videos(self):
-        if not self.video_upload_enabled or self.disable_logs:
-            return
-        if self.writer is None:
-            return
-        if self.video_dir is None:
-            return
-        if not hasattr(self.writer, "log_video_directory"):
-            return
-
-        fps = int(round(self.env.unwrapped.metadata.get("render_fps", 30)))
-        self.uploaded_video_paths = self.writer.log_video_directory(
-            self.video_wandb_key,
-            self.video_dir,
-            self.uploaded_video_paths,
-            fps=fps,
-            step=self.current_learning_iteration,
-        )
 
     """
     Helper functions.

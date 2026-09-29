@@ -3,4 +3,4 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Local AMP/AMPVAE subset of RSL-RL."""
+"""Main module for the rsl_rl package."""

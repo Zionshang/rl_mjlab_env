@@ -1,22 +1,40 @@
 import torch
 import torch.nn as nn
+
 from rsl_rl_local.networks import MLP
 
 
 class VAEBlind(nn.Module):
-    def __init__(self,
-                 vae_cfg: dict,
-                 ):
+    def __init__(
+        self,
+        vae_cfg: dict,
+        encoder_input_dim: int,
+        decoder_output_dim: int,
+    ):
         super().__init__()
-        self.encoder = MLP(vae_cfg['encoder_in_dim'], vae_cfg['encoder_out_dim'], vae_cfg['encoder_hidden_dims'], vae_cfg['activation'], vae_cfg['activation'])
+        decoder_input_dim = sum(vae_cfg["encoder_head_dim_dict"].values())
+        self.encoder = MLP(
+            encoder_input_dim,
+            vae_cfg["encoder_out_dim"],
+            vae_cfg["encoder_hidden_dims"],
+            vae_cfg["activation"],
+            vae_cfg["activation"],
+        )
 
-        self.encode_mean_latent = nn.Linear(vae_cfg['encoder_out_dim'], vae_cfg['encoder_head_dim_dict']['obs_latent'])
-        self.encode_logvar_latent = nn.Linear(vae_cfg['encoder_out_dim'], vae_cfg['encoder_head_dim_dict']['obs_latent'])
-        self.encode_vel = nn.Linear(vae_cfg['encoder_out_dim'], vae_cfg['encoder_head_dim_dict']['obs_vel'])
-        self.encode_com = nn.Linear(vae_cfg['encoder_out_dim'], vae_cfg['encoder_head_dim_dict']['obs_com'])
-        self.encode_mass = nn.Linear(vae_cfg['encoder_out_dim'], vae_cfg['encoder_head_dim_dict']['obs_mass'])
+        self.encode_mean_latent = nn.Linear(vae_cfg["encoder_out_dim"], vae_cfg["encoder_head_dim_dict"]["obs_latent"])
+        self.encode_logvar_latent = nn.Linear(
+            vae_cfg["encoder_out_dim"], vae_cfg["encoder_head_dim_dict"]["obs_latent"]
+        )
+        self.encode_vel = nn.Linear(vae_cfg["encoder_out_dim"], vae_cfg["encoder_head_dim_dict"]["obs_vel"])
+        self.encode_com = nn.Linear(vae_cfg["encoder_out_dim"], vae_cfg["encoder_head_dim_dict"]["obs_com"])
+        self.encode_mass = nn.Linear(vae_cfg["encoder_out_dim"], vae_cfg["encoder_head_dim_dict"]["obs_mass"])
 
-        self.decoder = MLP(vae_cfg['decoder_in_dim'], vae_cfg['decoder_out_dim'], vae_cfg['decoder_hidden_dims'], vae_cfg['activation'])
+        self.decoder = MLP(
+            decoder_input_dim,
+            decoder_output_dim,
+            vae_cfg["decoder_hidden_dims"],
+            vae_cfg["activation"],
+        )
 
         print(f"VAE Encoder: {self.encoder}")
         print(f"VAE Encode Mean Latent: {self.encode_mean_latent}")
@@ -49,7 +67,7 @@ class VAEBlind(nn.Module):
             "code_latent": code_latent,
             "decoded": decoded,
             "mean_latent": mean_latent,
-            "logvar_latent": logvar_latent
+            "logvar_latent": logvar_latent,
         }
 
     def reparameterise(self, mean, logvar, deterministic=False):

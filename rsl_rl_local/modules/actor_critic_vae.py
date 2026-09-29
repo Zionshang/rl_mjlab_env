@@ -12,55 +12,72 @@ from torch.distributions import Normal
 from rsl_rl_local.networks import MLP, EmpiricalNormalization
 
 
-class ActorCriticEncoder(nn.Module):
+class ActorCriticVae(nn.Module):
     def __init__(
         self,
-        module_cfg_dict
+        module_cfg_dict: dict,
+        observation_dims: dict[str, int],
+        num_actions: int,
+        use_vae: bool,
+        vae_output_dim: int = 0,
     ):
-        actor_cfg = module_cfg_dict['actor']
-        privileged_encoder_cfg = module_cfg_dict['privileged_encoder']
-        heightmap_encoder_cfg = module_cfg_dict['heightmap_encoder']
-        critic_cfg = module_cfg_dict['critic']
-        noise_std_type = module_cfg_dict['noise_std_type']
-        init_noise_std = module_cfg_dict['init_noise_std']
-        min_std = module_cfg_dict['min_normalized_std']
+        actor_cfg = module_cfg_dict["actor"]
+        privileged_encoder_cfg = module_cfg_dict["privileged_encoder"]
+        heightmap_encoder_cfg = module_cfg_dict["heightmap_encoder"]
+        critic_cfg = module_cfg_dict["critic"]
+        noise_std_type = module_cfg_dict["noise_std_type"]
+        init_noise_std = module_cfg_dict["init_noise_std"]
+        min_std = module_cfg_dict["min_normalized_std"]
         super().__init__()
+        self.use_vae = use_vae
+
+        actor_obs_dim = observation_dims["actor_obs"]
+        critic_obs_dim = observation_dims["critic_obs"]
+        privileged_obs_dim = observation_dims["privileged_obs"]
+        heightmap_obs_dim = observation_dims["gt_heightmap_obs"]
+        actor_input_dim = actor_obs_dim + (vae_output_dim if use_vae else 0)
+        critic_input_dim = (
+            critic_obs_dim + privileged_encoder_cfg["output_dim"] + heightmap_encoder_cfg["output_dim"]
+        )
 
         # actor
-        self.actor = MLP(actor_cfg['num_actor_obs'],
-                         actor_cfg['num_actions'],
-                         actor_cfg['actor_hidden_dims'],
-                         module_cfg_dict['activation'])
+        self.actor = MLP(
+            actor_input_dim,
+            num_actions,
+            actor_cfg["hidden_dims"],
+            module_cfg_dict["activation"],
+        )
         # actor observation normalization
-        self.actor_obs_normalization = actor_cfg['actor_obs_normalization']
-        if actor_cfg['actor_obs_normalization']:
-            self.actor_obs_normalizer = EmpiricalNormalization(actor_cfg['num_actor_obs'])
+        self.actor_obs_normalization = actor_cfg["observation_normalization"]
+        if actor_cfg["observation_normalization"]:
+            self.actor_obs_normalizer = EmpiricalNormalization(actor_obs_dim)
         else:
             self.actor_obs_normalizer = torch.nn.Identity()
         print(f"Actor MLP: {self.actor}")
 
         # privileged encoder
-        self.privileged_encoder = MLP(privileged_encoder_cfg['num_privileged_obs'],
-                                      privileged_encoder_cfg['num_privileged_encoder_out'],
-                                      privileged_encoder_cfg['privileged_encoder_hidden_dims'],
-                                      module_cfg_dict['activation'])
+        self.privileged_encoder = MLP(
+            privileged_obs_dim,
+            privileged_encoder_cfg["output_dim"],
+            privileged_encoder_cfg["hidden_dims"],
+            module_cfg_dict["activation"],
+        )
         print(f"Privileged Encoder MLP: {self.privileged_encoder}")
         # heightmap encoder
-        self.heightmap_encoder = MLP(heightmap_encoder_cfg['num_heightmap_obs'],
-                                     heightmap_encoder_cfg['num_heightmap_encoder_out'],
-                                     heightmap_encoder_cfg['heightmap_encoder_hidden_dims'],
-                                     module_cfg_dict['activation'])
+        self.heightmap_encoder = MLP(
+            heightmap_obs_dim,
+            heightmap_encoder_cfg["output_dim"],
+            heightmap_encoder_cfg["hidden_dims"],
+            module_cfg_dict["activation"],
+        )
         print(f"Heightmap Encoder MLP: {self.heightmap_encoder}")
 
         # critic
-        self.critic = MLP(critic_cfg['num_critic_obs'],
-                          1,
-                          critic_cfg['critic_hidden_dims'],
-                          module_cfg_dict['activation'])
+        self.critic = MLP(critic_input_dim, 1, critic_cfg["hidden_dims"], module_cfg_dict["activation"])
         # critic observation normalization
-        self.critic_obs_normalization = critic_cfg['critic_obs_normalization']
-        if critic_cfg['critic_obs_normalization']:
-            self.critic_obs_normalizer = EmpiricalNormalization(critic_cfg['num_critic_obs'])
+        self.critic_obs_normalization = critic_cfg["observation_normalization"]
+        if critic_cfg["observation_normalization"]:
+            self.critic_obs_normalizer = EmpiricalNormalization(critic_obs_dim)
         else:
             self.critic_obs_normalizer = torch.nn.Identity()
         print(f"Critic MLP: {self.critic}")
@@ -68,9 +85,9 @@ class ActorCriticEncoder(nn.Module):
         # Action noise
         self.noise_std_type = noise_std_type
         if self.noise_std_type == "scalar":
-            self.std = nn.Parameter(init_noise_std * torch.ones(actor_cfg['num_actions']))
+            self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
         elif self.noise_std_type == "log":
-            self.log_std = nn.Parameter(torch.log(init_noise_std * torch.ones(actor_cfg['num_actions'])))
+            self.log_std = nn.Parameter(torch.log(init_noise_std * torch.ones(num_actions)))
         else:
             raise ValueError(f"Unknown standard deviation type: {self.noise_std_type}. Should be 'scalar' or 'log'")
 
@@ -117,8 +134,8 @@ class ActorCriticEncoder(nn.Module):
     def act(self, obs):
         actor_obs = self.get_actor_obs(obs)
         actor_obs = self.actor_obs_normalizer(actor_obs)
-        if 'estimator_out' in obs:
-            obs = torch.cat((obs['estimator_out'], actor_obs), dim=-1)
+        if self.use_vae:
+            obs = torch.cat((obs["estimator_out"], actor_obs), dim=-1)
         else:
             obs = actor_obs
         self.update_distribution(obs)
@@ -127,8 +144,8 @@ class ActorCriticEncoder(nn.Module):
     def act_inference(self, obs):
         actor_obs = self.get_actor_obs(obs)
         actor_obs = self.actor_obs_normalizer(actor_obs)
-        if 'estimator_out' in obs:
-            obs = torch.cat((obs['estimator_out'], actor_obs), dim=-1)
+        if self.use_vae:
+            obs = torch.cat((obs["estimator_out"], actor_obs), dim=-1)
         else:
             obs = actor_obs
         return self.actor(obs)
@@ -146,16 +163,16 @@ class ActorCriticEncoder(nn.Module):
         return self.critic(obs)
 
     def get_actor_obs(self, obs):
-        return obs['actor_obs']
+        return obs["actor_obs"]
 
     def get_critic_obs(self, obs):
-        return obs['critic_obs']
+        return obs["critic_obs"]
 
     def get_privileged_obs(self, obs):
-        return obs['privileged_obs']
+        return obs["privileged_obs"]
 
     def get_heightmap_obs(self, obs):
-        return obs['gt_heightmap_obs']
+        return obs["gt_heightmap_obs"]
 
     def get_actions_log_prob(self, actions):
         return self.distribution.log_prob(actions).sum(dim=-1)
@@ -177,7 +194,8 @@ class ActorCriticEncoder(nn.Module):
                            module's state_dict() function.
 
         Returns:
-            bool: Whether this training resumes a previous training.
+            bool: Whether this training resumes a previous training. This flag is used by the `load()` function of
+                  `OnPolicyRunner` to determine how to load further parameters (relevant for, e.g., distillation).
         """
 
         super().load_state_dict(state_dict, strict=strict)

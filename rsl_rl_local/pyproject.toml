@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rsl-rl-lib-local"
+version = "3.0.1"
+description = "Fast and simple reinforcement learning algorithms (custom build)"
+license = "BSD-3-Clause"
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "GitPython",
+    "numpy",
+    "onnx",
+    "tensordict",
+    "tensorboard",
+    "torch",
+    "torchvision",
+    "wandb",
+]
+
+# The package sources live next to this manifest. Searching from the parent keeps
+# the distribution independent while preserving the upstream repository layout.
+[tool.setuptools.packages.find]
+where = [".."]
+include = ["rsl_rl_local*"]

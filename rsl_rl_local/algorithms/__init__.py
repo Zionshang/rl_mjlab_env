@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""AMP and AMPVAE algorithm implementations."""
+"""Implementation of different RL agents."""
 
-from .ppo_amp import PPOAMP
-from .ppo_ampvae import PPOAMPVAE
+from .vae_amp_ppo import VaeAmpPPO
 
-__all__ = ["PPOAMPVAE", "PPOAMP"]
+__all__ = ["VaeAmpPPO"]

@@ -21,11 +21,10 @@ class WandbSummaryWriter(SummaryWriter):
 
     def __init__(self, log_dir: str, flush_secs: int, cfg):
         super().__init__(log_dir, flush_secs)
+        self.log_dir = log_dir
 
-        # Use a descriptive W&B name without changing the local log directory layout.
-        run_dir_name = os.path.split(log_dir)[-1]
-        experiment_name = cfg.get("experiment_name", "")
-        run_name = f"{experiment_name}_{run_dir_name}" if experiment_name else run_dir_name
+        # Get the run name
+        run_name = os.path.split(log_dir)[-1]
 
         try:
             project = cfg["wandb_project"]
@@ -47,6 +46,7 @@ class WandbSummaryWriter(SummaryWriter):
             "Train/mean_reward/time": "Train/mean_reward_time",
             "Train/mean_episode_length/time": "Train/mean_episode_length_time",
         }
+        self._uploaded_videos: set[str] = set()
 
     def store_config(self, env_cfg, runner_cfg):
         wandb.config.update({"runner_cfg": runner_cfg})
@@ -64,6 +64,7 @@ class WandbSummaryWriter(SummaryWriter):
             new_style=new_style,
         )
         wandb.log({self._map_path(tag): scalar_value}, step=global_step)
+        self._sync_videos(global_step)
 
     def stop(self):
         wandb.finish()
@@ -77,34 +78,27 @@ class WandbSummaryWriter(SummaryWriter):
     def save_file(self, path, iter=None):
         wandb.save(path, base_path=os.path.dirname(path))
 
-    def log_video(self, tag: str, path: str, step: int | None = None, fps: int = 30):
-        wandb.log({tag: wandb.Video(path, fps=fps, format="mp4")}, step=step)
-
-    def log_video_directory(
-        self,
-        tag: str,
-        video_dir: str,
-        uploaded_paths: set[str] | None = None,
-        *,
-        fps: int = 30,
-        step: int | None = None,
-    ) -> set[str]:
-        video_dir_path = Path(video_dir)
-        if not video_dir_path.exists():
-            return set() if uploaded_paths is None else uploaded_paths
-
-        seen_paths = set() if uploaded_paths is None else set(uploaded_paths)
-        for video_path in sorted(video_dir_path.glob("*.mp4")):
-            video_key = str(video_path.resolve())
-            if video_key in seen_paths:
-                continue
-            self.log_video(tag, str(video_path), step=step, fps=fps)
-            seen_paths.add(video_key)
-        return seen_paths
-
     """
     Private methods.
     """
+
+    def _sync_videos(self, step=None):
+        video_root = Path(self.log_dir) / "videos"
+        if not video_root.exists():
+            return
+
+        for video_path in sorted(video_root.rglob("*.mp4")):
+            video_key = str(video_path.resolve())
+            if video_key in self._uploaded_videos:
+                continue
+
+            split_name = video_path.relative_to(video_root).parts[0] if len(video_path.relative_to(video_root).parts) > 1 else "default"
+            video_tag = f"Video/{split_name}"
+            wandb.log(
+                {video_tag: wandb.Video(str(video_path), format="mp4")},
+                step=step,
+            )
+            self._uploaded_videos.add(video_key)
 
     def _map_path(self, path):
         if path in self.name_map:

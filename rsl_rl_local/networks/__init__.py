@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Neural-network helpers used by AMPVAE."""
+"""Definitions for neural networks."""
 
 from .mlp import MLP
 from .normalization import EmpiricalNormalization

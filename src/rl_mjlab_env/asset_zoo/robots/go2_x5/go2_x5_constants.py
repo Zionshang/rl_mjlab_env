@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import mujoco
-
 from mjlab.actuator import BuiltinPositionActuatorCfg
 from mjlab.entity import EntityArticulationInfoCfg, EntityCfg
 from mjlab.utils.spec_config import CollisionCfg
@@ -76,27 +75,21 @@ GO2_X5_GRIPPER_TIP_GEOM_NAMES = ("link7_tip_collision", "link8_tip_collision")
 ##
 
 GO2_X5_ACTUATOR_HIP = BuiltinPositionActuatorCfg(
-  target_names_expr=(
-    ".*hip_.*",
-  ),
+  target_names_expr=(".*hip_.*",),
   stiffness=20.0,
   damping=1.0,
   effort_limit=23.5,
   armature=0.01,
 )
 GO2_X5_ACTUATOR_THIGH = BuiltinPositionActuatorCfg(
-  target_names_expr=(
-    ".*thigh_.*",
-  ),
+  target_names_expr=(".*thigh_.*",),
   stiffness=20.0,
   damping=1.0,
   effort_limit=23.5,
   armature=0.01,
 )
 GO2_X5_ACTUATOR_CALF = BuiltinPositionActuatorCfg(
-  target_names_expr=(
-    ".*calf_.*",
-  ),
+  target_names_expr=(".*calf_.*",),
   stiffness=40.0,
   damping=2.0,
   effort_limit=45.0,
@@ -209,9 +202,8 @@ def get_go2_x5_robot_cfg() -> EntityCfg:
 
 
 if __name__ == "__main__":
-  import mujoco.viewer as viewer
-
   from mjlab.entity.entity import Entity
+  from mujoco import viewer
 
   robot = Entity(get_go2_x5_robot_cfg())
   robot.spec.worldbody.add_geom(
@@ -220,6 +212,6 @@ if __name__ == "__main__":
     size=(4.0, 4.0, 1.0),
   )
   robot.spec.worldbody.add_light(
-    name="debug_sun",
-    type=mujoco.mjtLightType.mjLIGHT_DIRECTIONAL)
+    name="debug_sun", type=mujoco.mjtLightType.mjLIGHT_DIRECTIONAL
+  )
   viewer.launch(robot.spec.compile())

@@ -8,26 +8,30 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from rl_mjlab_env.utils.amp_utils.normalizer import Normalizer
-from rsl_rl_local.modules import ActorCriticEncoder, AMPDiscriminator
-from rsl_rl_local.storage import ReplayBuffer, RolloutStorageAMPVAE
+
+from rsl_rl_local.modules import ActorCriticVae, AMPDiscriminator
+from rsl_rl_local.storage import ReplayBuffer, VaeAmpRolloutStorage
+from rsl_rl_local.utils.amp_utils.normalizer import Normalizer
 
 
-class PPOAMPVAE:
-    """Proximal Policy Optimization algorithm (https://arxiv.org/abs/1707.06347)."""
+class VaeAmpPPO:
 
     def __init__(
         self,
-        module_dict: dict[str, ActorCriticEncoder | AMPDiscriminator | Normalizer],
+        module_dict: dict[str, ActorCriticVae | AMPDiscriminator | Normalizer],
         train_cfg_dict: dict,
         device="cuda:0",
         # Distributed training parameters
         multi_gpu_cfg: dict | None = None,
     ):
-        self.use_amp = train_cfg_dict['use_amp'] if 'use_amp' in train_cfg_dict else False
-        self.use_vae = train_cfg_dict['use_vae'] if 'use_vae' in train_cfg_dict else False
+        self.use_amp = train_cfg_dict["use_amp"] if "use_amp" in train_cfg_dict else False
+        self.use_vae = train_cfg_dict["use_vae"] if "use_vae" in train_cfg_dict else False
         if self.use_vae:
-            self.use_vae_exclusive_optimizer = train_cfg_dict['vae']['use_exclusive_optimizer'] if 'use_exclusive_optimizer' in train_cfg_dict['vae'] else False
+            self.use_vae_exclusive_optimizer = (
+                train_cfg_dict["vae"]["use_exclusive_optimizer"]
+                if "use_exclusive_optimizer" in train_cfg_dict["vae"]
+                else False
+            )
         else:
             self.use_vae_exclusive_optimizer = False
         self.device = device
@@ -43,33 +47,39 @@ class PPOAMPVAE:
         self.optimizer_dict = {}
         # PPO components
 
-        self.actor_critic = module_dict['actor_critic']
+        self.actor_critic = module_dict["actor_critic"]
         self.actor_critic.to(self.device)
         actor_critic_params = [
-            {"params": self.actor_critic.parameters(), "lr": train_cfg_dict['ppo_algorithm']['learning_rate'], "name": "actor_critic"},
+            {
+                "params": self.actor_critic.parameters(),
+                "lr": train_cfg_dict["ppo_algorithm"]["learning_rate"],
+                "name": "actor_critic",
+            },
         ]
 
         if self.use_amp:
             # AMP Discriminator components
-            self.amp_discriminator = module_dict['amp_discriminator']
+            self.amp_discriminator = module_dict["amp_discriminator"]
             self.amp_discriminator.to(self.device)
             # AMP data
-            self.amp_storage = ReplayBuffer(self.amp_discriminator.input_dim // 2, train_cfg_dict['amp']['amp_replay_buffer_size'], device)
-            self.amp_data = module_dict['amp_data']
-            self.amp_normalizer = module_dict['amp_normalizer']
+            self.amp_storage = ReplayBuffer(
+                self.amp_discriminator.input_dim // 2, train_cfg_dict["amp"]["amp_replay_buffer_size"], device
+            )
+            self.amp_data = module_dict["amp_data"]
+            self.amp_normalizer = module_dict["amp_normalizer"]
             # AMP parameters
-            self.amp_disc_grad_penalty = train_cfg_dict['amp']['amp_disc_grad_penalty']
+            self.amp_disc_grad_penalty = train_cfg_dict["amp"]["amp_disc_grad_penalty"]
 
             amp_params = [
                 {
                     "params": self.amp_discriminator.trunk.parameters(),
-                    "lr": train_cfg_dict['ppo_algorithm']['learning_rate'],
+                    "lr": train_cfg_dict["ppo_algorithm"]["learning_rate"],
                     "weight_decay": 10e-4,
                     "name": "amp_trunk",
                 },
                 {
                     "params": self.amp_discriminator.amp_linear.parameters(),
-                    "lr": train_cfg_dict['ppo_algorithm']['learning_rate'],
+                    "lr": train_cfg_dict["ppo_algorithm"]["learning_rate"],
                     "weight_decay": 10e-2,
                     "name": "amp_head",
                 },
@@ -77,54 +87,62 @@ class PPOAMPVAE:
             actor_critic_params += amp_params
         if self.use_vae:
             # VAE components
-            self.vae = module_dict['vae']
+            self.vae = module_dict["vae"]
             self.vae.to(self.device)
+            vae_head_dims = train_cfg_dict["vae"]["encoder_head_dim_dict"]
+            self.vae_ground_truth_dims = (
+                vae_head_dims["obs_vel"],
+                vae_head_dims["obs_com"],
+                vae_head_dims["obs_mass"],
+            )
             # VAE parameters
-            self.vae_beta = train_cfg_dict['vae']['beta']
-            self.vae_beta_adaptive = train_cfg_dict['vae']['beta_adaptive']
-            self.vae_beta_max_step = train_cfg_dict['vae']['beta_max_step']
-            self.vae_beta_max = train_cfg_dict['vae']['beta_max']
+            self.vae_beta = train_cfg_dict["vae"]["beta"]
+            self.vae_beta_adaptive = train_cfg_dict["vae"]["beta_adaptive"]
+            self.vae_beta_max_step = train_cfg_dict["vae"]["beta_max_step"]
+            self.vae_beta_max = train_cfg_dict["vae"]["beta_max"]
             self.vae_beta_step = (self.vae_beta_max - self.vae_beta) / self.vae_beta_max_step
-            self.vae_free_bits = train_cfg_dict['vae']['free_bits']
-            self.vae_use_adaboot = train_cfg_dict['vae']['use_adaboot']
+            self.vae_free_bits = train_cfg_dict["vae"]["free_bits"]
+            self.vae_use_adaboot = train_cfg_dict["vae"]["use_adaboot"]
             if self.vae_use_adaboot:
                 self.p_boot = 1.0
-                self.p_boot_step = 1.0 / train_cfg_dict['vae']['adaboot_max_step']
-            self.use_exclusive_lr = train_cfg_dict['vae']['use_exclusive_lr'] if 'use_exclusive_lr' in train_cfg_dict['vae'] else False
-            self.learning_rate_vae = train_cfg_dict['vae']['learning_rate']
+                self.p_boot_step = 1.0 / train_cfg_dict["vae"]["adaboot_max_step"]
+            self.use_exclusive_lr = (
+                train_cfg_dict["vae"]["use_exclusive_lr"] if "use_exclusive_lr" in train_cfg_dict["vae"] else False
+            )
+            self.learning_rate_vae = train_cfg_dict["vae"]["learning_rate"]
             if self.use_vae_exclusive_optimizer:
-                self.optimizer_dict['vae'] = optim.Adam(self.vae.parameters(), lr=self.learning_rate_vae)
+                self.optimizer_dict["vae"] = optim.Adam(self.vae.parameters(), lr=self.learning_rate_vae)
             else:
                 if self.use_exclusive_lr:
                     lr = self.learning_rate_vae
                 else:
-                    lr = train_cfg_dict['ppo_algorithm']['learning_rate']
+                    lr = train_cfg_dict["ppo_algorithm"]["learning_rate"]
                 vae_params = [
                     {"params": self.vae.parameters(), "lr": lr, "name": "vae"},
                 ]
                 actor_critic_params += vae_params
 
         # PPO optimizer
-        self.optimizer_dict['actor_critic'] = optim.Adam(actor_critic_params)
+        self.optimizer_dict["actor_critic"] = optim.Adam(actor_critic_params)
 
         # Create rollout storage
-        self.storage: RolloutStorageAMPVAE = None  # type: ignore
-        self.transition = RolloutStorageAMPVAE.Transition()
+        self.storage: VaeAmpRolloutStorage = None  # type: ignore
+        self.transition = VaeAmpRolloutStorage.Transition()
 
         # PPO parameters
-        self.clip_param = train_cfg_dict['ppo_algorithm']['clip_param']
-        self.num_learning_epochs = train_cfg_dict['ppo_algorithm']['num_learning_epochs']
-        self.num_mini_batches = train_cfg_dict['ppo_algorithm']['num_mini_batches']
-        self.value_loss_coef = train_cfg_dict['ppo_algorithm']['value_loss_coef']
-        self.entropy_coef = train_cfg_dict['ppo_algorithm']['entropy_coef']
-        self.gamma = train_cfg_dict['ppo_algorithm']['gamma']
-        self.lam = train_cfg_dict['ppo_algorithm']['lam']
-        self.max_grad_norm = train_cfg_dict['ppo_algorithm']['max_grad_norm']
-        self.use_clipped_value_loss = train_cfg_dict['ppo_algorithm']['use_clipped_value_loss']
-        self.desired_kl = train_cfg_dict['ppo_algorithm']['desired_kl']
-        self.schedule = train_cfg_dict['ppo_algorithm']['schedule']
-        self.learning_rate = train_cfg_dict['ppo_algorithm']['learning_rate']
-        self.normalize_advantage_per_mini_batch = train_cfg_dict['ppo_algorithm']['normalize_advantage_per_mini_batch']
+        self.clip_param = train_cfg_dict["ppo_algorithm"]["clip_param"]
+        self.num_learning_epochs = train_cfg_dict["ppo_algorithm"]["num_learning_epochs"]
+        self.num_mini_batches = train_cfg_dict["ppo_algorithm"]["num_mini_batches"]
+        self.value_loss_coef = train_cfg_dict["ppo_algorithm"]["value_loss_coef"]
+        self.entropy_coef = train_cfg_dict["ppo_algorithm"]["entropy_coef"]
+        self.gamma = train_cfg_dict["ppo_algorithm"]["gamma"]
+        self.lam = train_cfg_dict["ppo_algorithm"]["lam"]
+        self.max_grad_norm = train_cfg_dict["ppo_algorithm"]["max_grad_norm"]
+        self.use_clipped_value_loss = train_cfg_dict["ppo_algorithm"]["use_clipped_value_loss"]
+        self.desired_kl = train_cfg_dict["ppo_algorithm"]["desired_kl"]
+        self.schedule = train_cfg_dict["ppo_algorithm"]["schedule"]
+        self.learning_rate = train_cfg_dict["ppo_algorithm"]["learning_rate"]
+        self.normalize_advantage_per_mini_batch = train_cfg_dict["ppo_algorithm"]["normalize_advantage_per_mini_batch"]
 
     def init_storage(
         self,
@@ -136,7 +154,7 @@ class PPOAMPVAE:
         device,
     ):
         # create rollout storage
-        self.storage = RolloutStorageAMPVAE(
+        self.storage = VaeAmpRolloutStorage(
             training_type,
             num_envs,
             num_transitions_per_env,
@@ -147,17 +165,17 @@ class PPOAMPVAE:
 
     def act(self, obs):
         if self.use_vae:
-            vae_out = self.vae(obs['estimator_obs'])
-            vae_code = vae_out['code'].detach()
+            vae_out = self.vae(obs["estimator_obs"])
+            vae_code = vae_out["code"].detach()
             if self.vae_use_adaboot:
                 if self.p_boot > 0.0:
-                    gt_out = torch.cat((obs['gt_vel_obs'], obs['gt_com_obs'], obs['gt_mass_obs'], vae_out['code_latent']), dim=-1).detach()
+                    gt_out = torch.cat((obs["vae_ground_truth"], vae_out["code_latent"]), dim=-1).detach()
                     batch_num = gt_out.shape[0]
                     device = gt_out.device
                     k = int(self.p_boot * batch_num)
                     idx = torch.randperm(batch_num, device=device)[:k]
                     vae_code[idx, ...] = gt_out[idx, ...]
-            obs['estimator_out'] = vae_code.detach()
+            obs["estimator_out"] = vae_code.detach()
         # compute the actions and values
         self.transition.actions = self.actor_critic.act(obs).detach()
         self.transition.values = self.actor_critic.evaluate(obs).detach()
@@ -290,7 +308,7 @@ class PPOAMPVAE:
                         + (torch.square(old_sigma_batch) + torch.square(old_mu_batch - mu_batch))
                         / (2.0 * torch.square(sigma_batch))
                         - 0.5,
-                        axis=-1,
+                        dim=-1,
                     )
                     kl_mean = torch.mean(kl)
 
@@ -316,7 +334,7 @@ class PPOAMPVAE:
                         self.learning_rate = lr_tensor.item()
 
                     # Update the learning rate for all parameter groups
-                    for param_group in self.optimizer_dict['actor_critic'].param_groups:
+                    for param_group in self.optimizer_dict["actor_critic"].param_groups:
                         param_group["lr"] = self.learning_rate
                         if self.use_vae:
                             if self.use_exclusive_lr and param_group["name"] == "vae":
@@ -344,10 +362,8 @@ class PPOAMPVAE:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
             loss_dict = {}
-            loss_dict['actor_critic'] = (
-                surrogate_loss
-                + self.value_loss_coef * value_loss
-                - self.entropy_coef * entropy_batch.mean()
+            loss_dict["actor_critic"] = (
+                surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
             )
 
             if self.use_amp:
@@ -372,13 +388,13 @@ class PPOAMPVAE:
                     expert_state, expert_next_state, lambda_=self.amp_disc_grad_penalty
                 )
 
-                loss_dict['actor_critic'] += amp_loss + grad_pen_loss
+                loss_dict["actor_critic"] += amp_loss + grad_pen_loss
 
             if self.use_vae:
-                vae_out = self.vae(obs_batch['estimator_obs'])
-                vae_vel_target = obs_batch["gt_vel_obs"].detach()
-                vae_mass_target = obs_batch["gt_mass_obs"].detach()
-                vae_com_target = obs_batch["gt_com_obs"].detach()
+                vae_out = self.vae(obs_batch["estimator_obs"])
+                vae_vel_target, vae_com_target, vae_mass_target = torch.split(
+                    obs_batch["vae_ground_truth"].detach(), self.vae_ground_truth_dims, dim=-1
+                )
                 vae_decode_target = obs_batch["next_obs"].detach()
                 loss_recon_vel = nn.MSELoss()(vae_out["code_vel"], vae_vel_target)
                 loss_recon_mass = nn.MSELoss()(vae_out["code_mass"], vae_mass_target)
@@ -387,7 +403,7 @@ class PPOAMPVAE:
                 loss_recon = loss_recon_vel + loss_recon_mass + loss_recon_com + loss_recon_decode
 
                 mu, lv = vae_out["mean_latent"].float(), vae_out["logvar_latent"].float()
-                kl_pd = 0.5 * (mu.pow(2) + lv.exp() - 1.0 - lv)    # [B, D]
+                kl_pd = 0.5 * (mu.pow(2) + lv.exp() - 1.0 - lv)  # [B, D]
                 kl_dim = kl_pd.mean(0)
                 kl_fb = (kl_dim - self.vae_free_bits).clamp_min(0).sum()
 
@@ -400,9 +416,9 @@ class PPOAMPVAE:
                 under_fb_frac = (kl_dim < self.vae_free_bits).float().mean()
 
                 if self.use_vae_exclusive_optimizer:
-                    loss_dict['vae'] = loss_recon + kl_loss_obs
+                    loss_dict["vae"] = loss_recon + kl_loss_obs
                 else:
-                    loss_dict['actor_critic'] += loss_recon + kl_loss_obs
+                    loss_dict["actor_critic"] += loss_recon + kl_loss_obs
 
             # Compute the gradients
             for opt in self.optimizer_dict.values():

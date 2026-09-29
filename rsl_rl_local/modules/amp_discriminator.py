@@ -1,10 +1,11 @@
 import torch
 import torch.nn as nn
+from torch import autograd
+
 from rsl_rl_local.utils.log_print import (
     print_placeholder_end,
     print_placeholder_start,
 )
-from torch import autograd
 
 
 class AMPDiscriminator(nn.Module):
@@ -80,7 +81,8 @@ class AMPDiscriminator(nn.Module):
                            module's state_dict() function.
 
         Returns:
-            bool: Whether this training resumes a previous training.
+            bool: Whether this training resumes a previous training. This flag is used by the `load()` function of
+                  `OnPolicyRunner` to determine how to load further parameters (relevant for, e.g., distillation).
         """
 
         super().load_state_dict(state_dict, strict=strict)

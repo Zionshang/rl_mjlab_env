@@ -1,21 +1,21 @@
 """RL adapters and configs."""
 
 from rl_mjlab_env.rl.config import (
-    AmpvaeRunnerCfg,
-    AmpAlgorithmCfg,
-    AmpModuleCfg,
-    AmpPolicyCfg,
-    AmpRunnerCfg,
-    RslRlOnPolicyRunnerAMPCfg,
+  AmpCfg,
+  AmpDataCfg,
+  VaeAmpOnPolicyRunnerCfg,
+  VaeAmpPolicyCfg,
+  VaeAmpPpoAlgorithmCfg,
+  VaeCfg,
 )
-from rl_mjlab_env.rl.vecenv_wrapper_amp import AmpVecEnvWrapper
+from rl_mjlab_env.rl.vae_amp_vecenv_wrapper import VaeAmpVecEnvWrapper
 
 __all__ = [
-    "AmpvaeRunnerCfg",
-    "AmpAlgorithmCfg",
-    "AmpModuleCfg",
-    "AmpPolicyCfg",
-    "AmpRunnerCfg",
-    "AmpVecEnvWrapper",
-    "RslRlOnPolicyRunnerAMPCfg",
+  "AmpCfg",
+  "AmpDataCfg",
+  "VaeAmpOnPolicyRunnerCfg",
+  "VaeAmpPolicyCfg",
+  "VaeAmpPpoAlgorithmCfg",
+  "VaeAmpVecEnvWrapper",
+  "VaeCfg",
 ]

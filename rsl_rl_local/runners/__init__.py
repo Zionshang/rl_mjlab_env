@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""AMP and AMPVAE runners."""
+"""Implementation of runners for environment-agent interaction."""
 
-from .on_policy_runner_amp import OnPolicyRunnerAMP
-from .on_policy_runner_ampvae import OnPolicyRunnerAMPVAE
+from .vae_amp_on_policy_runner import VaeAmpOnPolicyRunner
 
-__all__ = ["OnPolicyRunnerAMP", "OnPolicyRunnerAMPVAE"]
+__all__ = ["VaeAmpOnPolicyRunner"]

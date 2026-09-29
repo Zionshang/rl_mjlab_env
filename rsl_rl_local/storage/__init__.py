@@ -3,14 +3,10 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Storage implementations used by AMP and AMPVAE."""
+"""Implementation of transitions storage for RL-agent."""
 
 from .replay_buffer import ReplayBuffer
-from .rollout_storage_amp import RolloutStorageAmp
-from .rollout_storage_ampvae import RolloutStorageAMPVAE
+from .rollout_storage import RolloutStorage
+from .vae_amp_rollout_storage import VaeAmpRolloutStorage
 
-__all__ = [
-    "ReplayBuffer",
-    "RolloutStorageAmp",
-    "RolloutStorageAMPVAE",
-]
+__all__ = ["ReplayBuffer", "RolloutStorage", "VaeAmpRolloutStorage"]

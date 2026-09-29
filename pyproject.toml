@@ -6,24 +6,30 @@ build-backend = "setuptools.build_meta"
 name = "rl-mjlab-env"
 version = "0.1.0"
 description = "MJLab reinforcement-learning environments."
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 dependencies = [
-  "mjlab",
+  "mjlab>=1.6,<2",
+  "rsl-rl-lib-local==3.0.1",
 ]
 
 [project.entry-points."mjlab.tasks"]
 rl_mjlab_env = "rl_mjlab_env.tasks"
 
 [project.scripts]
-train_amp = "rl_mjlab_env.scripts.amp.train:main"
-play_amp = "rl_mjlab_env.scripts.amp.play:main"
 train_ampvae = "rl_mjlab_env.scripts.ampvae.train:main"
 play_ampvae = "rl_mjlab_env.scripts.ampvae.play:main"
 
 [tool.setuptools.packages.find]
-where = ["src", "."]
-include = ["rl_mjlab_env*", "rsl_rl_local*"]
+where = ["src"]
+include = ["rl_mjlab_env*"]
+
+[tool.setuptools.package-data]
+rl_mjlab_env = [
+  "asset_zoo/robots/*/xmls/*.xml",
+  "asset_zoo/robots/*/xmls/assets/*.obj",
+]
 
 [tool.ruff]
-src = ["src", "rsl_rl_local"]
-indent-width = 4
+src = ["src"]
+exclude = ["rsl_rl_local"]
+indent-width = 2

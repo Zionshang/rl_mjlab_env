@@ -3,17 +3,18 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Neural-network components used by AMP and AMPVAE."""
+"""Definitions for neural-network components for RL-agents."""
 
+from .actor_critic_vae import ActorCriticVae
 from .amp_discriminator import AMPDiscriminator
-from .actor_critic import ActorCritic
-from .actor_critic_ampvae import ActorCriticEncoder
+from .spatial_softmax import SpatialSoftmax, SpatialSoftmaxCNN, SpatialSoftmaxCNNModel
 from .vae_blind import VAEBlind
-
 
 __all__ = [
     "AMPDiscriminator",
-    "ActorCritic",
-    "ActorCriticEncoder",
+    "ActorCriticVae",
+    "SpatialSoftmax",
+    "SpatialSoftmaxCNN",
+    "SpatialSoftmaxCNNModel",
     "VAEBlind",
 ]
